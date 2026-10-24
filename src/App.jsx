@@ -94,19 +94,19 @@ export default function App() {
         if (kpiRes.status === 'fulfilled' && kpiRes.value?.kpis) {
           setKpis(kpiRes.value.kpis);
         }
-        if (tradersRes.status === 'fulfilled' && tradersRes.value?.traders?.length) {
+        if (tradersRes.status === 'fulfilled' && Array.isArray(tradersRes.value?.traders)) {
           setTraders(tradersRes.value.traders);
         }
-        if (depositsRes.status === 'fulfilled' && depositsRes.value?.deposits?.length) {
+        if (depositsRes.status === 'fulfilled' && Array.isArray(depositsRes.value?.deposits)) {
           setDeposits(depositsRes.value.deposits);
         }
-        if (withdrawalsRes.status === 'fulfilled' && withdrawalsRes.value?.withdrawals?.length) {
+        if (withdrawalsRes.status === 'fulfilled' && Array.isArray(withdrawalsRes.value?.withdrawals)) {
           setWithdrawals(withdrawalsRes.value.withdrawals);
         }
-        if (poolRes.status === 'fulfilled' && poolRes.value?.activeStakers?.length) {
+        if (poolRes.status === 'fulfilled' && Array.isArray(poolRes.value?.activeStakers)) {
           setGameRounds(poolRes.value.activeStakers);
         }
-        if (plansRes.status === 'fulfilled' && plansRes.value?.plans?.length) {
+        if (plansRes.status === 'fulfilled' && Array.isArray(plansRes.value?.plans)) {
           setPlans(plansRes.value.plans);
         }
         if (settingsRes.status === 'fulfilled' && settingsRes.value?.settings) {

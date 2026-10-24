@@ -188,8 +188,15 @@ export default function WithdrawalsPage({
               </tr>
             </thead>
             <tbody>
-              {filteredWithdrawals.map((w) => (
-                <tr key={w.id}>
+              {filteredWithdrawals.length === 0 ? (
+                <tr>
+                  <td colSpan="9" style={{ padding: '36px 14px', textAlign: 'center', color: '#8b9bb4', fontSize: '13px' }}>
+                    🏧 No withdrawal payout requests found. New withdrawal requests from traders will appear here live!
+                  </td>
+                </tr>
+              ) : (
+                filteredWithdrawals.map((w) => (
+                  <tr key={w.id}>
                   <td style={{ fontFamily: 'monospace', fontWeight: 600, color: '#f59e0b' }}>
                     {w.id}
                   </td>
@@ -257,7 +264,7 @@ export default function WithdrawalsPage({
                     )}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

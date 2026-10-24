@@ -176,8 +176,15 @@ export default function DepositsPage({
               </tr>
             </thead>
             <tbody>
-              {filteredDeposits.map((d) => (
-                <tr key={d.id}>
+              {filteredDeposits.length === 0 ? (
+                <tr>
+                  <td colSpan="8" style={{ padding: '36px 14px', textAlign: 'center', color: '#8b9bb4', fontSize: '13px' }}>
+                    💳 No deposits recorded yet. New incoming user deposits will appear here live!
+                  </td>
+                </tr>
+              ) : (
+                filteredDeposits.map((d) => (
+                  <tr key={d.id}>
                   <td style={{ fontFamily: 'monospace', fontWeight: 600, color: '#f59e0b' }}>
                     {d.id}
                   </td>
@@ -247,7 +254,7 @@ export default function DepositsPage({
                     )}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
