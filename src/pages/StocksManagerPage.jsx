@@ -166,6 +166,32 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
     reader.readAsDataURL(file);
   };
 
+  // Handle QR File Upload inside Add/Edit Asset modal
+  const handleEditQrFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showAdminWarning('Invalid File', 'Please select a valid image file (PNG, JPG, WEBP).');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      showAdminWarning('File Too Large', 'Please upload an image smaller than 2MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const base64Url = uploadEvent.target?.result;
+      if (base64Url) {
+        setFormData((prev) => ({ ...prev, qrCode: base64Url }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+
   // Save Dedicated Company QR Code
   const handleSaveCompanyQr = async (e) => {
     e.preventDefault();
@@ -656,17 +682,21 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                       <button
                         onClick={() => handleOpenQrModal(item)}
                         style={{
-                          padding: '4px 8px',
+                          padding: '5px 10px',
                           fontSize: '11px',
-                          fontWeight: 700,
-                          background: 'rgba(245, 158, 11, 0.12)',
-                          border: '1px solid rgba(245, 158, 11, 0.35)',
-                          color: '#f59e0b',
+                          fontWeight: 800,
+                          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(16, 185, 129, 0.15))',
+                          border: '1px solid #f59e0b',
+                          color: '#fbbf24',
                           cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          whiteSpace: 'nowrap',
                         }}
-                        title={`Manage Company QR & UPI for ${item.name}`}
+                        title={`Set / Upload Custom QR Code for ${item.name}`}
                       >
-                        📱 QR Code
+                        📱 Set Stock QR
                       </button>
                       <button
                         onClick={() => handleOpenEdit(item)}
@@ -725,7 +755,9 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
             className="square-card"
             style={{
               width: '100%',
-              maxWidth: '520px',
+              maxWidth: '540px',
+              maxHeight: '92vh',
+              overflowY: 'auto',
               padding: '24px',
               border: '1px solid #f59e0b',
               background: '#0e121a',
@@ -898,31 +930,76 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                    Company UPI ID (Payment Receiver)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. tatamotors.paynex@icici"
-                    value={formData.upiId}
-                    onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
-                    className="square-input"
-                    style={{ fontFamily: 'monospace', color: '#f59e0b' }}
-                  />
+              {/* DEDICATED STOCK PAYMENT QR & UPI SECTION INSIDE EDIT MODAL */}
+              <div style={{ background: '#0b0e14', border: '1px solid rgba(245, 158, 11, 0.4)', padding: '12px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: '#f59e0b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>📱 Stock Payment Receiver (Custom QR & UPI)</span>
                 </div>
-                <div>
-                  <label style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                    Payee / Merchant Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Tata Motors Trading Desk"
-                    value={formData.payeeName}
-                    onChange={(e) => setFormData({ ...formData, payeeName: e.target.value })}
-                    className="square-input"
-                  />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', alignItems: 'start' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '10.5px', color: '#8b9bb4', fontWeight: 600, display: 'block', marginBottom: '3px' }}>
+                        Company UPI ID (Receiver) *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. tatamotors.paynex@icici"
+                        value={formData.upiId}
+                        onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
+                        className="square-input"
+                        style={{ fontFamily: 'monospace', color: '#f59e0b' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', color: '#8b9bb4', fontWeight: 600, display: 'block', marginBottom: '3px' }}>
+                        Payee / Merchant Name
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Tata Motors Trading Desk"
+                        value={formData.payeeName}
+                        onChange={(e) => setFormData({ ...formData, payeeName: e.target.value })}
+                        className="square-input"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', color: '#8b9bb4', fontWeight: 600, display: 'block', marginBottom: '3px' }}>
+                        Upload Custom QR Image (PNG/JPG)
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEditQrFileUpload}
+                        style={{ fontSize: '10px', color: '#cbd5e1' }}
+                      />
+                      {formData.qrCode && (
+                        <div style={{ marginTop: '4px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, qrCode: '' })}
+                            style={{ fontSize: '9.5px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#f87171', padding: '2px 6px', cursor: 'pointer' }}
+                          >
+                            ✕ Clear Custom QR (Use Auto UPI)
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* QR Live Thumbnail Preview */}
+                  <div style={{ textAlign: 'center', background: '#141a26', padding: '8px', border: '1px solid #1e2638' }}>
+                    <div style={{ width: '90px', height: '90px', background: '#fff', margin: '0 auto', padding: '4px' }}>
+                      <img
+                        src={getCompanyQrUrl(formData)}
+                        alt="Stock QR Preview"
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                      />
+                    </div>
+                    <div style={{ fontSize: '9.5px', color: formData.qrCode ? '#f59e0b' : '#10b981', fontWeight: 700, marginTop: '4px' }}>
+                      {formData.qrCode ? 'Custom QR Uploaded' : 'Auto UPI QR'}
+                    </div>
+                  </div>
                 </div>
               </div>
 
