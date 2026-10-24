@@ -86,4 +86,11 @@ export const showToast = (title, icon = 'success') => {
   });
 };
 
+// Aliases for unified naming across components
+export const showAdminSuccess = showSuccessAlert;
+export const showAdminError = showErrorAlert;
+export const showAdminWarning = showWarningAlert;
+export const showAdminConfirm = showConfirmDialog;
+export const showAdminToast = showToast;
+
 export default PaynexSwal;
