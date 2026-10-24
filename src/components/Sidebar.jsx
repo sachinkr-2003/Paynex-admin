@@ -100,7 +100,7 @@ export default function Sidebar({
                 style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', maxWidth: '32px', maxHeight: '32px' }}
               >
                 <img
-                  src="/paynex_icon.png"
+                  src="/paynex-logo.jpg"
                   alt="PAYNEX Logo"
                   className="w-full h-full object-cover"
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
@@ -116,9 +116,12 @@ export default function Sidebar({
                     <span className="text-white font-extrabold text-sm tracking-wide">
                       PAYNEX
                     </span>
+                    <span className="text-[10px] text-amber-500 font-bold">
+                      CRYPTO
+                    </span>
                   </div>
                   <div className="text-[10.5px] text-slate-500">
-                    Master Terminal
+                    Admin Console
                   </div>
                 </div>
               )}

@@ -99,9 +99,9 @@ export const initialInvestmentPlans = [
 ];
 
 export const initialSystemSettings = {
-  platformName: 'Paynex',
-  officialUpiId: 'paynex@icici',
-  merchantName: 'Paynex Technologies Pvt Ltd',
+  platformName: 'PAYNEX CRYPTO',
+  officialUpiId: 'paynex.crypto@icici',
+  merchantName: 'Paynex Crypto Technologies Pvt Ltd',
   minDeposit: 500,
   minWithdrawal: 1000,
   withdrawalFeePercent: 0,
@@ -110,7 +110,7 @@ export const initialSystemSettings = {
   autoApproveKyc: false,
   autoReleaseWithdrawals: false,
   supportHelpline: '1800 234 5678',
-  supportEmail: 'support@paynex.com',
+  supportEmail: 'support@paynexcrypto.io',
   whatsappCare: '+91 98765 43210',
-  telegramChannel: 'https://t.me/paynex_official',
+  telegramChannel: 'https://t.me/paynexcrypto_support',
 };
