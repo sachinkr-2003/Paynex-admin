@@ -1,0 +1,324 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #0b0e14;
+    color: #f1f5f9;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: clip;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer components {
+  /* Strict Square / Core Theming */
+  .square-card,
+  .square-btn,
+  .square-input,
+  .square-badge,
+  .square-modal,
+  .square-tab,
+  .square-select,
+  .square-table th,
+  .square-table td,
+  .square-box {
+    border-radius: 0px !important;
+  }
+
+  .square-card {
+    background: #121722;
+    border: 1px solid #1e2638;
+    position: relative;
+    transition: border-color 0.15s ease;
+  }
+
+  .square-card:hover {
+    border-color: #2a354d;
+  }
+
+  .square-btn-primary {
+    background: #f59e0b;
+    color: #0b0e14;
+    font-weight: 700;
+    font-size: 12.5px;
+    border: 1px solid #f59e0b;
+    padding: 8px 16px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 0px !important;
+    transition: all 0.15s ease;
+  }
+
+  .square-btn-primary:hover {
+    background: #d97706;
+    border-color: #d97706;
+  }
+
+  .square-btn-secondary {
+    background: #171d2b;
+    color: #e2e8f0;
+    font-weight: 600;
+    font-size: 12.5px;
+    border: 1px solid #1e2638;
+    padding: 8px 16px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 0px !important;
+    transition: all 0.15s ease;
+  }
+
+  .square-btn-secondary:hover {
+    background: #1d2537;
+    border-color: #2f3b54;
+    color: #ffffff;
+  }
+
+  .square-btn-excel {
+    background: #0f6c38;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 12px;
+    border: 1px solid #148043;
+    padding: 8px 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 0px !important;
+    transition: background 0.15s ease;
+  }
+
+  .square-btn-excel:hover {
+    background: #137d42;
+  }
+
+  .square-btn-success {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    font-weight: 600;
+    font-size: 11.5px;
+    padding: 6px 12px;
+    cursor: pointer;
+    border-radius: 0px !important;
+    transition: all 0.15s ease;
+  }
+
+  .square-btn-success:hover {
+    background: #10b981;
+    color: #0b0e14;
+  }
+
+  .square-btn-danger {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    font-weight: 600;
+    font-size: 11.5px;
+    padding: 6px 12px;
+    cursor: pointer;
+    border-radius: 0px !important;
+    transition: all 0.15s ease;
+  }
+
+  .square-btn-danger:hover {
+    background: #ef4444;
+    color: #ffffff;
+  }
+
+  .square-input {
+    background: #0d111a;
+    border: 1px solid #1e2638;
+    color: #f1f5f9;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 0px !important;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  .square-input:focus {
+    border-color: #f59e0b;
+  }
+
+  /* Excel Data Grid Table */
+  .excel-table-container {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #1e2638;
+    background: #121722;
+  }
+
+  .square-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    text-align: left;
+  }
+
+  .square-table thead {
+    background: #0f131c;
+    border-bottom: 1px solid #1e2638;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .square-table th {
+    padding: 11px 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    color: #8b9bb4;
+    border-right: 1px solid #1a2233;
+    white-space: nowrap;
+    border-radius: 0px !important;
+  }
+
+  .square-table th:last-child {
+    border-right: none;
+  }
+
+  .square-table tbody tr {
+    border-bottom: 1px solid #161c28;
+    transition: background 0.12s ease;
+  }
+
+  .square-table tbody tr:hover {
+    background: #161c28;
+  }
+
+  .square-table tbody tr:nth-child(even) {
+    background: #10141e;
+  }
+
+  .square-table tbody tr:nth-child(even):hover {
+    background: #171e2c;
+  }
+
+  .square-table td {
+    padding: 10px 14px;
+    color: #d1d9e6;
+    border-right: 1px solid #182030;
+    vertical-align: middle;
+    border-radius: 0px !important;
+  }
+
+  .square-table td:last-child {
+    border-right: none;
+  }
+
+  .square-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    border-radius: 0px !important;
+  }
+
+  .badge-gold {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+
+  .badge-cyan {
+    background: rgba(6, 182, 212, 0.12);
+    color: #06b6d4;
+    border: 1px solid rgba(6, 182, 212, 0.3);
+  }
+
+  .badge-green {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+
+  .badge-red {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .badge-gray {
+    background: rgba(148, 163, 184, 0.1);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+  }
+}
+
+/* Paynex Custom Square SweetAlert2 Styles */
+.paynex-swal-popup {
+  border-radius: 0px !important;
+  border: 1px solid #2a354d !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85) !important;
+  padding: 24px !important;
+}
+
+.paynex-swal-title {
+  font-family: 'Outfit', sans-serif !important;
+  padding: 0 !important;
+  margin-top: 10px !important;
+}
+
+.paynex-swal-content {
+  font-family: 'Outfit', sans-serif !important;
+  margin: 12px 0 0 0 !important;
+}
+
+.paynex-swal-actions {
+  gap: 12px !important;
+  margin-top: 24px !important;
+}
+
+.paynex-swal-confirm-btn {
+  background: #f59e0b !important;
+  color: #0b0e14 !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  padding: 10px 22px !important;
+  border: 1px solid #f59e0b !important;
+  border-radius: 0px !important;
+  cursor: pointer !important;
+  letter-spacing: 0.05em !important;
+  transition: all 0.15s ease !important;
+}
+
+.paynex-swal-confirm-btn:hover {
+  background: #fbbf24 !important;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.4) !important;
+}
+
+.paynex-swal-cancel-btn {
+  background: #171d2b !important;
+  color: #94a3b8 !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 10px 20px !important;
+  border: 1px solid #2a354d !important;
+  border-radius: 0px !important;
+  cursor: pointer !important;
+  letter-spacing: 0.05em !important;
+  transition: all 0.15s ease !important;
+}
+
+.paynex-swal-cancel-btn:hover {
+  background: #1e2638 !important;
+  color: #fff !important;
+}
