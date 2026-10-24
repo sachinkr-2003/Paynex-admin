@@ -7,12 +7,13 @@ import {
   showAdminWarning,
   showAdminConfirm,
 } from '../utils/swal';
+import { FIFTY_STOCKS } from '../data/stocksData';
 
 export default function StocksManagerPage({ showToast, searchQuery = '' }) {
-  const [assets, setAssets] = useState([]);
+  const [assets, setAssets] = useState(FIFTY_STOCKS);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('All');
-  const [stats, setStats] = useState({ totalCount: 0, activeCount: 0, stockCount: 0, cryptoCount: 0 });
+  const [stats, setStats] = useState({ totalCount: FIFTY_STOCKS.length, activeCount: FIFTY_STOCKS.length, stockCount: 50, cryptoCount: 6 });
 
   // Modal State for Add / Edit Asset
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -36,8 +37,8 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
   const fetchAssets = async () => {
     try {
       const res = await adminApi.getAssets();
-      if (res && res.success) {
-        setAssets(res.assets || []);
+      if (res && res.success && Array.isArray(res.assets) && res.assets.length > 0) {
+        setAssets(res.assets);
         if (res.stats) setStats(res.stats);
       }
     } catch (err) {
