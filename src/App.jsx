@@ -9,6 +9,7 @@ import WithdrawalsPage from './pages/WithdrawalsPage';
 import UsersPage from './pages/UsersPage';
 import PlansPage from './pages/PlansPage';
 import SettingsPage from './pages/SettingsPage';
+import StocksManagerPage from './pages/StocksManagerPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import {
   initialKPIs,
@@ -264,6 +265,13 @@ export default function App() {
             />
           )}
 
+          {activeTab === 'stocks_manager' && (
+            <StocksManagerPage
+              showToast={showToast}
+              searchQuery={searchQuery}
+            />
+          )}
+
           {activeTab === 'game_engine' && (
             <GameEnginePage
               kpis={kpis}
@@ -272,6 +280,7 @@ export default function App() {
               setGameRounds={setGameRounds}
               showToast={showToast}
               searchQuery={searchQuery}
+              setActiveTab={setActiveTab}
             />
           )}
 

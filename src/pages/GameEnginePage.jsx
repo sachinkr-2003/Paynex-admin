@@ -10,6 +10,7 @@ export default function GameEnginePage({
   setGameRounds,
   showToast,
   searchQuery = '',
+  setActiveTab = () => {},
 }) {
   const [selectedRate, setSelectedRate] = useState(kpis.adminProfitPercent);
   const [customRate, setCustomRate] = useState('');
@@ -94,6 +95,50 @@ export default function GameEnginePage({
 
         <button onClick={handleExportEngineExcel} className="square-btn-excel" style={{ height: '32px' }}>
           Export Engine Log
+        </button>
+      </div>
+
+      {/* Stock-specific Return % Shortcut Banner */}
+      <div
+        className="square-card"
+        style={{
+          padding: '12px 18px',
+          background: 'linear-gradient(90deg, rgba(16,185,129,0.08) 0%, rgba(14,165,233,0.05) 100%)',
+          borderLeft: '4px solid #10b981',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '18px' }}>📈</span>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>
+              Want to set different Profit / Return % for individual Stocks?
+            </div>
+            <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+              Configure Tata Motors (+40%), Reliance (+22%), Tesla (+45%), Gold (+18%) or Add brand new stocks.
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => setActiveTab('stocks_manager')}
+          style={{
+            padding: '7px 14px',
+            background: '#10b981',
+            color: '#041c10',
+            border: 'none',
+            borderRadius: '0px',
+            fontWeight: 700,
+            fontSize: '11px',
+            cursor: 'pointer',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+          }}
+        >
+          Open Stocks & Return % Manager →
         </button>
       </div>
 

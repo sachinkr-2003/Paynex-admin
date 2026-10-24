@@ -101,6 +101,23 @@ export const adminApi = {
       method: 'PUT',
       body: JSON.stringify(settingsData),
     }),
+
+  // Stocks & Game Assets (Custom Interest % Engine)
+  getAssets: (params = '') => request(`/assets/admin/all${params ? `?${params}` : ''}`),
+  createAsset: (assetData) =>
+    request('/assets/admin/create', {
+      method: 'POST',
+      body: JSON.stringify(assetData),
+    }),
+  updateAsset: (id, updates) =>
+    request(`/assets/admin/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    }),
+  deleteAsset: (id) =>
+    request(`/assets/admin/${id}`, {
+      method: 'DELETE',
+    }),
 };
 
 export default adminApi;
