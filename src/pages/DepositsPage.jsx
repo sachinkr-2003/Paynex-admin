@@ -190,6 +190,11 @@ export default function DepositsPage({
                   </td>
                   <td>
                     <span className="square-badge badge-gray">{d.method}</span>
+                    {d.companyName && (
+                      <div style={{ fontSize: '10.5px', color: '#f59e0b', fontWeight: 700, marginTop: '2px' }}>
+                        🏢 {d.companyName}
+                      </div>
+                    )}
                   </td>
                   <td style={{ fontFamily: 'monospace', color: '#f1f5f9', fontWeight: 500 }}>
                     {d.utr}

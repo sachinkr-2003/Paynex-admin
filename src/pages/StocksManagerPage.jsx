@@ -7,10 +7,10 @@ import {
   showAdminWarning,
   showAdminConfirm,
 } from '../utils/swal';
-import { FIFTY_STOCKS } from '../data/stocksData';
+import { FIFTY_STOCKS, getCompanyQrUrl, enrichStockWithPayment } from '../data/stocksData';
 
 export default function StocksManagerPage({ showToast, searchQuery = '' }) {
-  const [assets, setAssets] = useState(FIFTY_STOCKS);
+  const [assets, setAssets] = useState(() => FIFTY_STOCKS.map(enrichStockWithPayment));
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [stats, setStats] = useState({ totalCount: FIFTY_STOCKS.length, activeCount: FIFTY_STOCKS.length, stockCount: 50, cryptoCount: 6 });
@@ -30,8 +30,20 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
     minStake: 100,
     maxStake: 500000,
     isEnabled: true,
+    upiId: '',
+    payeeName: '',
+    qrCode: '',
     description: '',
   });
+
+  // Dedicated Company QR & UPI Modal State
+  const [qrModalAsset, setQrModalAsset] = useState(null);
+  const [qrFormData, setQrFormData] = useState({
+    upiId: '',
+    payeeName: '',
+    qrCode: '',
+  });
+  const [qrMode, setQrMode] = useState('auto'); // 'auto' | 'upload' | 'url'
 
   // Fetch all assets from backend
   const fetchAssets = async () => {
@@ -82,6 +94,9 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
       minStake: 100,
       maxStake: 500000,
       isEnabled: true,
+      upiId: '',
+      payeeName: '',
+      qrCode: '',
       description: '',
     });
     setIsModalOpen(true);
@@ -89,6 +104,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
 
   // Open modal for Edit
   const handleOpenEdit = (item) => {
+    const cleanSym = (item.symbol || item.id || 'stock').toLowerCase().replace(/[^a-z0-9]/g, '');
     setEditingAsset(item);
     setFormData({
       name: item.name,
@@ -102,9 +118,93 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
       minStake: item.minStake || 100,
       maxStake: item.maxStake || 500000,
       isEnabled: item.isEnabled !== false,
+      upiId: item.upiId || `${cleanSym}.paynex@icici`,
+      payeeName: item.payeeName || `${item.name} Trading Desk`,
+      qrCode: item.qrCode || '',
       description: item.description || '',
     });
     setIsModalOpen(true);
+  };
+
+  // Open Dedicated Company QR Modal
+  const handleOpenQrModal = (item) => {
+    const cleanSym = (item.symbol || item.id || 'stock').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const currentUpi = item.upiId || `${cleanSym}.paynex@icici`;
+    const currentPayee = item.payeeName || `${item.name} Trading Desk`;
+    setQrModalAsset(item);
+    setQrFormData({
+      upiId: currentUpi,
+      payeeName: currentPayee,
+      qrCode: item.qrCode || '',
+    });
+    setQrMode(item.qrCode ? 'upload' : 'auto');
+  };
+
+  // Handle Custom QR Image File Upload
+  const handleQrFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showAdminWarning('Invalid File', 'Please select a valid image file (PNG, JPG, WEBP).');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      showAdminWarning('File Too Large', 'Please upload an image smaller than 2MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const base64Url = uploadEvent.target?.result;
+      if (base64Url) {
+        setQrFormData((prev) => ({ ...prev, qrCode: base64Url }));
+        setQrMode('upload');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Save Dedicated Company QR Code
+  const handleSaveCompanyQr = async (e) => {
+    e.preventDefault();
+    if (!qrModalAsset) return;
+
+    if (!qrFormData.upiId.trim()) {
+      showAdminWarning('Missing UPI ID', 'Please enter a UPI ID for this company.');
+      return;
+    }
+
+    const payload = {
+      upiId: qrFormData.upiId.trim(),
+      payeeName: qrFormData.payeeName.trim() || `${qrModalAsset.name} Trading Desk`,
+      qrCode: qrMode === 'auto' ? '' : qrFormData.qrCode,
+    };
+
+    setAssets((prev) =>
+      prev.map((a) =>
+        (a.id === qrModalAsset.id || a._id === qrModalAsset._id)
+          ? { ...a, ...payload }
+          : a
+      )
+    );
+
+    try {
+      await adminApi.updateAsset(qrModalAsset.id || qrModalAsset._id, payload);
+      showAdminSuccess(
+        'Company QR Saved',
+        `Payment QR Code and UPI ID for <strong>${qrModalAsset.name}</strong> successfully updated.`
+      );
+    } catch (err) {
+      console.warn('Backend QR save fallback:', err.message);
+      showAdminSuccess(
+        'Company QR Saved Locally',
+        `QR & UPI for ${qrModalAsset.name} updated.`
+      );
+    } finally {
+      setQrModalAsset(null);
+    }
   };
 
   // Save (Create or Update)
@@ -350,6 +450,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 <th>Category</th>
                 <th>Live Base Price</th>
                 <th>Admin Interest Rate (% Return)</th>
+                <th>Payment QR & UPI (Company)</th>
                 <th>Stake Limits</th>
                 <th>Status</th>
                 <th>Quick Actions</th>
@@ -461,6 +562,65 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                     </div>
                   </td>
 
+                  {/* Company Payment QR & UPI */}
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div
+                        onClick={() => handleOpenQrModal(item)}
+                        style={{
+                          width: '38px',
+                          height: '38px',
+                          background: '#fff',
+                          padding: '2px',
+                          cursor: 'pointer',
+                          border: '1px solid #f59e0b',
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                        title={`Click to preview / edit QR for ${item.name}`}
+                      >
+                        <img
+                          src={getCompanyQrUrl(item)}
+                          alt={`${item.symbol} QR`}
+                          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                        />
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontFamily: 'monospace',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            color: '#f59e0b',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: '140px',
+                          }}
+                        >
+                          {item.upiId || `${(item.symbol || 'stock').toLowerCase().replace(/[^a-z0-9]/g, '')}.paynex@icici`}
+                        </div>
+                        <button
+                          onClick={() => handleOpenQrModal(item)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#38bdf8',
+                            fontSize: '10.5px',
+                            fontWeight: 700,
+                            padding: 0,
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                          }}
+                        >
+                          📱 Set / Change QR
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+
                   {/* Min / Max Stake */}
                   <td>
                     <div style={{ fontSize: '11px', color: '#cbd5e1', fontFamily: 'monospace' }}>
@@ -494,6 +654,21 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                   <td>
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <button
+                        onClick={() => handleOpenQrModal(item)}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          background: 'rgba(245, 158, 11, 0.12)',
+                          border: '1px solid rgba(245, 158, 11, 0.35)',
+                          color: '#f59e0b',
+                          cursor: 'pointer',
+                        }}
+                        title={`Manage Company QR & UPI for ${item.name}`}
+                      >
+                        📱 QR Code
+                      </button>
+                      <button
                         onClick={() => handleOpenEdit(item)}
                         style={{
                           padding: '4px 10px',
@@ -505,7 +680,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                           cursor: 'pointer',
                         }}
                       >
-                        Edit Rate / Details
+                        Edit
                       </button>
                       <button
                         onClick={() => handleDeleteAsset(item)}
@@ -723,6 +898,34 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 </div>
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                    Company UPI ID (Payment Receiver)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. tatamotors.paynex@icici"
+                    value={formData.upiId}
+                    onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
+                    className="square-input"
+                    style={{ fontFamily: 'monospace', color: '#f59e0b' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                    Payee / Merchant Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Tata Motors Trading Desk"
+                    value={formData.payeeName}
+                    onChange={(e) => setFormData({ ...formData, payeeName: e.target.value })}
+                    className="square-input"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
                   Description / Subtitle
@@ -747,6 +950,264 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
+                  style={{
+                    padding: '10px 16px',
+                    background: '#141a26',
+                    border: '1px solid #1e2638',
+                    color: '#8b9bb4',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 6. DEDICATED COMPANY QR & PAYMENT MODAL */}
+      {qrModalAsset && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 999,
+            background: 'rgba(5, 7, 12, 0.88)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          onClick={() => setQrModalAsset(null)}
+        >
+          <div
+            className="square-card"
+            style={{
+              width: '100%',
+              maxWidth: '520px',
+              padding: '24px',
+              border: '1px solid #f59e0b',
+              background: '#0e121a',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#f1f5f9' }}>
+                  📱 Set Payment QR & UPI • {qrModalAsset.name}
+                </div>
+                <div style={{ fontSize: '12px', color: '#8b9bb4', marginTop: '2px' }}>
+                  Symbol: <span style={{ color: '#f59e0b', fontFamily: 'monospace', fontWeight: 700 }}>{qrModalAsset.symbol}</span> • Return Rate: <span style={{ color: '#10b981', fontWeight: 700 }}>+{qrModalAsset.returnPercent}% Guaranteed</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setQrModalAsset(null)}
+                style={{ background: 'none', border: 'none', color: '#8b9bb4', fontSize: '16px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCompanyQr} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Company UPI ID */}
+              <div>
+                <label style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                  Company Designated UPI ID *
+                </label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    type="text"
+                    value={qrFormData.upiId}
+                    onChange={(e) => setQrFormData({ ...qrFormData, upiId: e.target.value })}
+                    className="square-input"
+                    style={{ flex: 1, fontFamily: 'monospace', fontWeight: 700, color: '#f59e0b' }}
+                    placeholder="e.g. tatamotors.paynex@icici"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const clean = (qrModalAsset.symbol || 'stock').toLowerCase().replace(/[^a-z0-9]/g, '');
+                      setQrFormData({ ...qrFormData, upiId: `${clean}.paynex@icici` });
+                    }}
+                    className="square-btn-secondary"
+                    style={{ padding: '4px 10px', fontSize: '11px' }}
+                    title="Generate default branded UPI ID"
+                  >
+                    Auto Format
+                  </button>
+                </div>
+              </div>
+
+              {/* Payee / Receiver Name */}
+              <div>
+                <label style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                  Receiver / Payee Name (Appears on GPay / PhonePe scan)
+                </label>
+                <input
+                  type="text"
+                  value={qrFormData.payeeName}
+                  onChange={(e) => setQrFormData({ ...qrFormData, payeeName: e.target.value })}
+                  className="square-input"
+                  placeholder="e.g. Tata Motors Trading Desk"
+                />
+              </div>
+
+              {/* QR Code Mode Selection */}
+              <div>
+                <label style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+                  QR Code Source:
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQrMode('auto');
+                      setQrFormData((prev) => ({ ...prev, qrCode: '' }));
+                    }}
+                    style={{
+                      padding: '8px',
+                      fontSize: '11.5px',
+                      fontWeight: 700,
+                      border: qrMode === 'auto' ? '1px solid #10b981' : '1px solid #1e2638',
+                      background: qrMode === 'auto' ? 'rgba(16, 185, 129, 0.15)' : '#141a26',
+                      color: qrMode === 'auto' ? '#10b981' : '#8b9bb4',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ⚡ Auto UPI QR
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQrMode('upload')}
+                    style={{
+                      padding: '8px',
+                      fontSize: '11.5px',
+                      fontWeight: 700,
+                      border: qrMode === 'upload' ? '1px solid #f59e0b' : '1px solid #1e2638',
+                      background: qrMode === 'upload' ? 'rgba(245, 158, 11, 0.15)' : '#141a26',
+                      color: qrMode === 'upload' ? '#f59e0b' : '#8b9bb4',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    📁 Upload Image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQrMode('url')}
+                    style={{
+                      padding: '8px',
+                      fontSize: '11.5px',
+                      fontWeight: 700,
+                      border: qrMode === 'url' ? '1px solid #38bdf8' : '1px solid #1e2638',
+                      background: qrMode === 'url' ? 'rgba(56, 189, 248, 0.15)' : '#141a26',
+                      color: qrMode === 'url' ? '#38bdf8' : '#8b9bb4',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    🔗 Image URL
+                  </button>
+                </div>
+
+                {qrMode === 'upload' && (
+                  <div style={{ background: '#141a26', border: '1px dashed #f59e0b', padding: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: '#f1f5f9', fontWeight: 600, marginBottom: '6px' }}>
+                      Upload Custom QR Code (PNG / JPG / WEBP)
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleQrFileUpload}
+                      style={{ fontSize: '11px', color: '#8b9bb4' }}
+                    />
+                  </div>
+                )}
+
+                {qrMode === 'url' && (
+                  <div>
+                    <input
+                      type="url"
+                      placeholder="Paste Image URL (https://.../my_qr.png)"
+                      value={qrFormData.qrCode}
+                      onChange={(e) => setQrFormData({ ...qrFormData, qrCode: e.target.value })}
+                      className="square-input"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Live QR Preview Box */}
+              <div
+                style={{
+                  background: '#070a10',
+                  border: '1px solid #1e2638',
+                  padding: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '120px',
+                    height: '120px',
+                    background: '#fff',
+                    padding: '6px',
+                    border: '1px solid #f59e0b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <img
+                    src={
+                      qrFormData.qrCode && qrFormData.qrCode.trim().length > 0
+                        ? qrFormData.qrCode
+                        : `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
+                            `upi://pay?pa=${qrFormData.upiId || 'paynex@icici'}&pn=${encodeURIComponent(
+                              qrFormData.payeeName || qrModalAsset.name
+                            )}&cu=INR`
+                          )}`
+                    }
+                    alt="Live QR Preview"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                </div>
+
+                <div style={{ fontSize: '12px', color: '#8b9bb4' }}>
+                  <div style={{ color: '#10b981', fontWeight: 700, marginBottom: '3px' }}>
+                    ● Real-Time Scannable QR Code
+                  </div>
+                  <div>
+                    User payments for <strong>{qrModalAsset.name}</strong> will route directly to:
+                  </div>
+                  <div style={{ color: '#f59e0b', fontFamily: 'monospace', fontWeight: 700, marginTop: '4px' }}>
+                    {qrFormData.upiId || 'No UPI ID set'}
+                  </div>
+                  <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '6px' }}>
+                    Works seamlessly with PhonePe, Google Pay, Paytm & BHIM UPI.
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                <button
+                  type="submit"
+                  className="square-btn-primary"
+                  style={{ flex: 1, padding: '10px', fontSize: '13px', fontWeight: 800 }}
+                >
+                  💾 Save Company QR Code & UPI
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQrModalAsset(null)}
                   style={{
                     padding: '10px 16px',
                     background: '#141a26',

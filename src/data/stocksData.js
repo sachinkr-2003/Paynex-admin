@@ -783,3 +783,26 @@ export const FIFTY_STOCKS = [
     maxStake: 800000,
   },
 ];
+
+export const getCompanyQrUrl = (stock) => {
+  if (stock?.qrCode && stock.qrCode.trim().length > 0) {
+    return stock.qrCode;
+  }
+  const cleanSym = (stock?.symbol || stock?.id || 'stock').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const upiId = stock?.upiId || `${cleanSym}.paynex@icici`;
+  const payee = encodeURIComponent(stock?.payeeName || `${stock?.name || 'Company'} Trading Desk`);
+  const upiString = `upi://pay?pa=${upiId}&pn=${payee}&cu=INR`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiString)}`;
+};
+
+export const enrichStockWithPayment = (s) => {
+  const cleanSym = (s.symbol || s.id || 'stock').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const defaultUpi = s.upiId || `${cleanSym}.paynex@icici`;
+  const defaultPayee = s.payeeName || `${s.name} Trading Desk`;
+  return {
+    ...s,
+    upiId: defaultUpi,
+    payeeName: defaultPayee,
+    qrCode: s.qrCode || '',
+  };
+};
