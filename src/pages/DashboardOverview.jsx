@@ -55,16 +55,16 @@ export default function DashboardOverview({
     .reduce((sum, r) => sum + (Number(r.payout) || 0), 0);
 
   // 5. Total User Capital Invested (Inflow)
-  // Total user money invested in the platform
   const totalUserInvested =
-    Number(kpis?.totalUserInvested) ||
-    Math.max(approvedDepositsAmount, totalStakesAmount, 1485000);
+    kpis?.totalUserInvested !== undefined
+      ? Number(kpis.totalUserInvested)
+      : (approvedDepositsAmount + totalStakesAmount);
 
   // 6. Total Money Paid Out to Users (Outflow)
-  // User explicitly asked to display this with a MINUS sign (-₹...)
   const totalPaidOut =
-    Number(kpis?.totalPaidOut) ||
-    Math.max(completedWithdrawalsAmount, totalWonPayouts, 642000);
+    kpis?.totalPaidOut !== undefined
+      ? Number(kpis.totalPaidOut)
+      : (completedWithdrawalsAmount + totalWonPayouts);
 
   // 7. Overall Net Platform Profit / Balance (Inflow - Outflow)
   const netPlatformProfit =
@@ -79,15 +79,15 @@ export default function DashboardOverview({
   const inflowPercent =
     totalCashflow > 0
       ? ((totalUserInvested / totalCashflow) * 100).toFixed(1)
-      : '69.8';
+      : '0.0';
   const outflowPercent =
     totalCashflow > 0
       ? ((totalPaidOut / totalCashflow) * 100).toFixed(1)
-      : '30.2';
+      : '0.0';
   const profitMargin =
     totalUserInvested > 0
       ? ((netPlatformProfit / totalUserInvested) * 100).toFixed(1)
-      : '56.8';
+      : '0.0';
 
   const handleExportRoundsExcel = () => {
     const headers = [
@@ -183,44 +183,45 @@ export default function DashboardOverview({
           <div
             className="square-card"
             style={{
-              padding: '20px',
+              padding: '11px 14px',
               borderLeft: '4px solid #10b981',
               background: 'linear-gradient(180deg, #121722 0%, rgba(16, 185, 129, 0.05) 100%)',
               position: 'relative',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="square-badge badge-green" style={{ fontSize: '10.5px', fontWeight: 700 }}>
+              <span className="square-badge badge-green" style={{ fontSize: '9px', fontWeight: 700, padding: '1.5px 6px' }}>
                 ● TOTAL USER INVESTED (INFLOW)
               </span>
-              <span style={{ fontSize: '18px' }}>💰</span>
+              <span style={{ fontSize: '14px' }}>💰</span>
             </div>
 
             <div
               style={{
-                fontSize: '28px',
+                fontSize: '20px',
                 fontWeight: 900,
                 color: '#10b981',
                 fontFamily: 'monospace',
-                marginTop: '12px',
+                marginTop: '4px',
                 letterSpacing: '-0.02em',
+                lineHeight: 1.2,
               }}
             >
               +₹{totalUserInvested.toLocaleString('en-IN')}
             </div>
 
-            <div style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '6px', fontWeight: 500 }}>
+            <div style={{ fontSize: '11px', color: '#8b9bb4', marginTop: '2px', fontWeight: 500 }}>
               Total money users invested in the platform
             </div>
 
             <div
               style={{
-                marginTop: '14px',
-                paddingTop: '12px',
+                marginTop: '8px',
+                paddingTop: '6px',
                 borderTop: '1px solid #1e2638',
                 display: 'flex',
                 justifyContent: 'space-between',
-                fontSize: '11px',
+                fontSize: '10.5px',
                 color: '#8b9bb4',
               }}
             >
@@ -233,44 +234,45 @@ export default function DashboardOverview({
           <div
             className="square-card"
             style={{
-              padding: '20px',
+              padding: '11px 14px',
               borderLeft: '4px solid #ef4444',
               background: 'linear-gradient(180deg, #121722 0%, rgba(239, 68, 68, 0.05) 100%)',
               position: 'relative',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="square-badge badge-red" style={{ fontSize: '10.5px', fontWeight: 700 }}>
+              <span className="square-badge badge-red" style={{ fontSize: '9px', fontWeight: 700, padding: '1.5px 6px' }}>
                 ● TOTAL MONEY PAID OUT (MINUS)
               </span>
-              <span style={{ fontSize: '18px' }}>📤</span>
+              <span style={{ fontSize: '14px' }}>📤</span>
             </div>
 
             <div
               style={{
-                fontSize: '28px',
+                fontSize: '20px',
                 fontWeight: 900,
                 color: '#ef4444',
                 fontFamily: 'monospace',
-                marginTop: '12px',
+                marginTop: '4px',
                 letterSpacing: '-0.02em',
+                lineHeight: 1.2,
               }}
             >
               -₹{totalPaidOut.toLocaleString('en-IN')}
             </div>
 
-            <div style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '6px', fontWeight: 500 }}>
+            <div style={{ fontSize: '11px', color: '#8b9bb4', marginTop: '2px', fontWeight: 500 }}>
               Total money given / disbursed to users (Bank / UPI)
             </div>
 
             <div
               style={{
-                marginTop: '14px',
-                paddingTop: '12px',
+                marginTop: '8px',
+                paddingTop: '6px',
                 borderTop: '1px solid #1e2638',
                 display: 'flex',
                 justifyContent: 'space-between',
-                fontSize: '11px',
+                fontSize: '10.5px',
                 color: '#8b9bb4',
               }}
             >
@@ -283,7 +285,7 @@ export default function DashboardOverview({
           <div
             className="square-card"
             style={{
-              padding: '20px',
+              padding: '11px 14px',
               borderLeft: `4px solid ${isProfit ? '#f59e0b' : '#ef4444'}`,
               background: `linear-gradient(180deg, #121722 0%, ${
                 isProfit ? 'rgba(245, 158, 11, 0.05)' : 'rgba(239, 68, 68, 0.05)'
@@ -292,42 +294,43 @@ export default function DashboardOverview({
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="square-badge badge-gold" style={{ fontSize: '10.5px', fontWeight: 700 }}>
+              <span className="square-badge badge-gold" style={{ fontSize: '9px', fontWeight: 700, padding: '1.5px 6px' }}>
                 ● OVERALL NET PLATFORM PROFIT
               </span>
-              <span style={{ fontSize: '18px' }}>🏦</span>
+              <span style={{ fontSize: '14px' }}>🏦</span>
             </div>
 
             <div
               style={{
-                fontSize: '28px',
+                fontSize: '20px',
                 fontWeight: 900,
                 color: isProfit ? '#10b981' : '#ef4444',
                 fontFamily: 'monospace',
-                marginTop: '12px',
+                marginTop: '4px',
                 letterSpacing: '-0.02em',
+                lineHeight: 1.2,
               }}
             >
               {isProfit ? '+' : '-'}₹{Math.abs(netPlatformProfit).toLocaleString('en-IN')}
             </div>
 
-            <div style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '6px', fontWeight: 500 }}>
+            <div style={{ fontSize: '11px', color: '#8b9bb4', marginTop: '2px', fontWeight: 500 }}>
               Overall Net Position (Inflow - Outflow)
             </div>
 
             <div
               style={{
-                marginTop: '14px',
-                paddingTop: '12px',
+                marginTop: '8px',
+                paddingTop: '6px',
                 borderTop: '1px solid #1e2638',
                 display: 'flex',
                 justifyContent: 'space-between',
-                fontSize: '11px',
+                fontSize: '10.5px',
                 color: '#8b9bb4',
               }}
             >
-              <span>Profit Margin: <strong style={{ color: isProfit ? '#10b981' : '#ef4444' }}>+{profitMargin}%</strong></span>
-              <span>Status: <strong style={{ color: isProfit ? '#10b981' : '#f59e0b' }}>{isProfit ? 'Net Surplus ✅' : 'Deficit ⚠️'}</strong></span>
+              <span>Profit Margin: <strong style={{ color: isProfit ? '#10b981' : '#ef4444' }}>{totalUserInvested > 0 ? `+${profitMargin}%` : '0%'}</strong></span>
+              <span>Status: <strong style={{ color: isProfit ? '#10b981' : '#f59e0b' }}>{totalUserInvested === 0 && totalPaidOut === 0 ? 'Balanced ⚖️' : isProfit ? 'Net Surplus ✅' : 'Deficit ⚠️'}</strong></span>
             </div>
           </div>
         </div>
@@ -337,13 +340,13 @@ export default function DashboardOverview({
       <div
         className="square-card"
         style={{
-          padding: '14px 18px',
+          padding: '8px 14px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '10px',
+          gap: '6px',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontWeight: 700, color: '#f1f5f9' }}>Cashflow Balance:</span>
             <span style={{ color: '#10b981', fontWeight: 700 }}>Inflow +₹{totalUserInvested.toLocaleString('en-IN')} ({inflowPercent}%)</span>
@@ -359,7 +362,7 @@ export default function DashboardOverview({
         <div
           style={{
             width: '100%',
-            height: '10px',
+            height: '6px',
             background: '#0d111a',
             border: '1px solid #1e2638',
             display: 'flex',
@@ -368,7 +371,7 @@ export default function DashboardOverview({
         >
           <div
             style={{
-              width: `${inflowPercent}%`,
+              width: `${totalCashflow > 0 ? inflowPercent : 50}%`,
               height: '100%',
               background: '#10b981',
               transition: 'width 0.3s ease',
@@ -377,7 +380,7 @@ export default function DashboardOverview({
           />
           <div
             style={{
-              width: `${outflowPercent}%`,
+              width: `${totalCashflow > 0 ? outflowPercent : 50}%`,
               height: '100%',
               background: '#ef4444',
               transition: 'width 0.3s ease',
@@ -392,7 +395,7 @@ export default function DashboardOverview({
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '14px',
+          gap: '12px',
         }}
       >
         {/* Card 1: Deposit Requests (Pending Action) */}
@@ -400,25 +403,25 @@ export default function DashboardOverview({
           onClick={() => setActiveTab('deposits')}
           className="square-card"
           style={{
-            padding: '18px',
+            padding: '11px 14px',
             borderLeft: pendingDeposits.length > 0 ? '4px solid #f59e0b' : '1px solid #1e2638',
             cursor: 'pointer',
             transition: 'all 0.15s ease',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '10px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Pending Deposits
             </span>
-            <span style={{ fontSize: '15px' }}>💳</span>
+            <span style={{ fontSize: '13px' }}>💳</span>
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: '#f59e0b', fontFamily: 'monospace', marginTop: '8px' }}>
+          <div style={{ fontSize: '19px', fontWeight: 800, color: '#f59e0b', fontFamily: 'monospace', marginTop: '4px' }}>
             {pendingDeposits.length}{' '}
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#8b9bb4' }}>
+            <span style={{ fontSize: '11.5px', fontWeight: 600, color: '#8b9bb4' }}>
               (₹{pendingDepositsAmount.toLocaleString('en-IN')})
             </span>
           </div>
-          <div style={{ fontSize: '11.5px', color: pendingDeposits.length > 0 ? '#fbbf24' : '#10b981', marginTop: '6px', fontWeight: 600 }}>
+          <div style={{ fontSize: '10.5px', color: pendingDeposits.length > 0 ? '#fbbf24' : '#10b981', marginTop: '3px', fontWeight: 600 }}>
             {pendingDeposits.length > 0 ? '⚠️ Action Required: Verify UTR & Credit' : '✅ All deposits verified'}
           </div>
         </div>
@@ -428,25 +431,25 @@ export default function DashboardOverview({
           onClick={() => setActiveTab('withdrawals')}
           className="square-card"
           style={{
-            padding: '18px',
+            padding: '11px 14px',
             borderLeft: pendingWithdrawals.length > 0 ? '4px solid #ef4444' : '1px solid #1e2638',
             cursor: 'pointer',
             transition: 'all 0.15s ease',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '10px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Pending Payouts
             </span>
-            <span style={{ fontSize: '15px' }}>🏧</span>
+            <span style={{ fontSize: '13px' }}>🏧</span>
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: '#ef4444', fontFamily: 'monospace', marginTop: '8px' }}>
+          <div style={{ fontSize: '19px', fontWeight: 800, color: '#ef4444', fontFamily: 'monospace', marginTop: '4px' }}>
             {pendingWithdrawals.length}{' '}
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#8b9bb4' }}>
+            <span style={{ fontSize: '11.5px', fontWeight: 600, color: '#8b9bb4' }}>
               (₹{pendingWithdrawalsAmount.toLocaleString('en-IN')})
             </span>
           </div>
-          <div style={{ fontSize: '11.5px', color: pendingWithdrawals.length > 0 ? '#f87171' : '#10b981', marginTop: '6px', fontWeight: 600 }}>
+          <div style={{ fontSize: '10.5px', color: pendingWithdrawals.length > 0 ? '#f87171' : '#10b981', marginTop: '3px', fontWeight: 600 }}>
             {pendingWithdrawals.length > 0 ? '⚠️ IMPS Payouts Waiting Approval' : '✅ Zero pending payouts'}
           </div>
         </div>
@@ -456,23 +459,23 @@ export default function DashboardOverview({
           onClick={() => setActiveTab('stocks_manager')}
           className="square-card"
           style={{
-            padding: '18px',
+            padding: '11px 14px',
             borderLeft: '4px solid #10b981',
             cursor: 'pointer',
             transition: 'all 0.15s ease',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '10px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Active Stocks Catalog
             </span>
-            <span style={{ fontSize: '15px' }}>📈</span>
+            <span style={{ fontSize: '13px' }}>📈</span>
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: '#10b981', fontFamily: 'monospace', marginTop: '8px' }}>
-            50+ Assets
+          <div style={{ fontSize: '19px', fontWeight: 800, color: '#10b981', fontFamily: 'monospace', marginTop: '4px' }}>
+            59 Assets
           </div>
-          <div style={{ fontSize: '11.5px', color: '#8b9bb4', marginTop: '6px' }}>
-            Tata Motors (40%), Tesla (45%), Reliance (22%)
+          <div style={{ fontSize: '10.5px', color: '#8b9bb4', marginTop: '3px' }}>
+            Individual UPI & QR Enabled
           </div>
         </div>
 
@@ -481,25 +484,25 @@ export default function DashboardOverview({
           onClick={() => setActiveTab('users')}
           className="square-card"
           style={{
-            padding: '18px',
+            padding: '11px 14px',
             borderLeft: '4px solid #0284c7',
             cursor: 'pointer',
             transition: 'all 0.15s ease',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '10px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Total Traders
             </span>
-            <span style={{ fontSize: '15px' }}>👥</span>
+            <span style={{ fontSize: '13px' }}>👥</span>
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: '#f1f5f9', fontFamily: 'monospace', marginTop: '8px' }}>
-            {traders.length || kpis.totalTraders || 1348}{' '}
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#10b981' }}>
-              ● {kpis.activeTradersNow || 342} Active
+          <div style={{ fontSize: '19px', fontWeight: 800, color: '#f1f5f9', fontFamily: 'monospace', marginTop: '4px' }}>
+            {traders.length || kpis?.totalTraders || 1}{' '}
+            <span style={{ fontSize: '11.5px', fontWeight: 600, color: '#10b981' }}>
+              ● {traders.length > 0 ? 1 : 0} Active
             </span>
           </div>
-          <div style={{ fontSize: '11.5px', color: '#8b9bb4', marginTop: '6px' }}>
+          <div style={{ fontSize: '10.5px', color: '#8b9bb4', marginTop: '3px' }}>
             Click to manage trader wallets & KYC
           </div>
         </div>
