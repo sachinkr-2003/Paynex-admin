@@ -3,11 +3,9 @@ import './App.css';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import DashboardOverview from './pages/DashboardOverview';
-import GameEnginePage from './pages/GameEnginePage';
 import DepositsPage from './pages/DepositsPage';
 import WithdrawalsPage from './pages/WithdrawalsPage';
 import UsersPage from './pages/UsersPage';
-import PlansPage from './pages/PlansPage';
 import SettingsPage from './pages/SettingsPage';
 import StocksManagerPage from './pages/StocksManagerPage';
 import AdminLoginPage from './pages/AdminLoginPage';
@@ -17,7 +15,6 @@ import {
   initialDeposits,
   initialWithdrawals,
   initialGameRounds,
-  initialInvestmentPlans,
   initialSystemSettings,
 } from './data/adminData';
 import { exportToExcel } from './utils/exportToExcel';
@@ -55,7 +52,6 @@ export default function App() {
   const [deposits, setDeposits] = useState(initialDeposits);
   const [withdrawals, setWithdrawals] = useState(initialWithdrawals);
   const [gameRounds, setGameRounds] = useState(initialGameRounds);
-  const [plans, setPlans] = useState(initialInvestmentPlans);
   const [settings, setSettings] = useState(initialSystemSettings);
 
   // Toast Helper
@@ -272,18 +268,6 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'game_engine' && (
-            <GameEnginePage
-              kpis={kpis}
-              setKpis={setKpis}
-              gameRounds={gameRounds}
-              setGameRounds={setGameRounds}
-              showToast={showToast}
-              searchQuery={searchQuery}
-              setActiveTab={setActiveTab}
-            />
-          )}
-
           {activeTab === 'deposits' && (
             <DepositsPage
               deposits={deposits}
@@ -312,15 +296,6 @@ export default function App() {
             <UsersPage
               traders={traders}
               setTraders={setTraders}
-              showToast={showToast}
-              searchQuery={searchQuery}
-            />
-          )}
-
-          {activeTab === 'plans' && (
-            <PlansPage
-              plans={plans}
-              setPlans={setPlans}
               showToast={showToast}
               searchQuery={searchQuery}
             />

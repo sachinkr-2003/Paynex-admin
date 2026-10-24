@@ -23,15 +23,8 @@ export default function Sidebar({
       id: 'stocks_manager',
       label: 'Stocks & Return %',
       icon: '📈',
-      badge: 'NEW',
+      badge: '50+ STOCKS',
       badgeColor: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30',
-    },
-    {
-      id: 'game_engine',
-      label: 'Staking Engine (30%)',
-      icon: '⚡',
-      badge: activeRoundsCount > 0 ? `${activeRoundsCount}` : null,
-      badgeColor: 'bg-amber-500/15 text-amber-500 border border-amber-500/30',
     },
     {
       id: 'deposits',
@@ -54,14 +47,8 @@ export default function Sidebar({
       badge: null,
     },
     {
-      id: 'plans',
-      label: 'Investment Plans',
-      icon: '💼',
-      badge: null,
-    },
-    {
       id: 'settings',
-      label: 'System Settings',
+      label: 'Payment & UPI Settings',
       icon: '⚙️',
       badge: null,
     },
