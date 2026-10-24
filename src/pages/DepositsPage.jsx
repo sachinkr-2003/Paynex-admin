@@ -67,11 +67,17 @@ export default function DepositsPage({
       })
     );
 
-    setKpis((prev) => ({
-      ...prev,
-      depositsToday: prev.depositsToday + deposit.amount,
-      totalPlatformVolume: prev.totalPlatformVolume + deposit.amount,
-    }));
+    setKpis((prev) => {
+      const newInvested = (prev.totalUserInvested || 0) + deposit.amount;
+      const currentPaid = prev.totalPaidOut || 0;
+      return {
+        ...prev,
+        depositsToday: (prev.depositsToday || 0) + deposit.amount,
+        totalPlatformVolume: (prev.totalPlatformVolume || 0) + deposit.amount,
+        totalUserInvested: newInvested,
+        netPlatformProfit: newInvested - currentPaid,
+      };
+    });
 
     showSuccessAlert(
       'Deposit Approved & Credited',

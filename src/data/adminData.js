@@ -1,5 +1,8 @@
 export const initialKPIs = {
   totalPlatformVolume: 48250000,
+  totalUserInvested: 1485000, // Total money invested by users
+  totalPaidOut: 642000, // Total money paid out to users
+  netPlatformProfit: 843000, // Inflow - Outflow
   liveStakingPool: 1998100,
   totalTraders: 1348,
   activeTradersNow: 342,

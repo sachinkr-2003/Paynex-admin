@@ -64,11 +64,17 @@ export default function WithdrawalsPage({
       )
     );
 
-    setKpis((prev) => ({
-      ...prev,
-      pendingWithdrawalsAmount: Math.max(0, prev.pendingWithdrawalsAmount - item.amount),
-      pendingWithdrawalsCount: Math.max(0, prev.pendingWithdrawalsCount - 1),
-    }));
+    setKpis((prev) => {
+      const newPaid = (prev.totalPaidOut || 0) + item.amount;
+      const currentInvested = prev.totalUserInvested || 0;
+      return {
+        ...prev,
+        pendingWithdrawalsAmount: Math.max(0, prev.pendingWithdrawalsAmount - item.amount),
+        pendingWithdrawalsCount: Math.max(0, prev.pendingWithdrawalsCount - 1),
+        totalPaidOut: newPaid,
+        netPlatformProfit: currentInvested - newPaid,
+      };
+    });
 
     showSuccessAlert(
       'Payout Dispatched via IMPS',

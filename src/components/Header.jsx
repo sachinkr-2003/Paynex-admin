@@ -32,12 +32,11 @@ export default function Header({
   }, []);
 
   const titles = {
-    dashboard: 'Dashboard',
-    game_engine: 'Staking Engine',
+    dashboard: 'Dashboard Overview',
+    stocks_manager: 'Stocks & Return % (50+)',
     deposits: 'Deposit Approvals',
     withdrawals: 'Withdrawal Payouts',
     users: 'Traders Ledger',
-    plans: 'Investment Plans',
     settings: 'System Settings',
   };
 
