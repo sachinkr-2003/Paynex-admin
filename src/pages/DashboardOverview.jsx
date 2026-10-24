@@ -4,49 +4,29 @@ import { exportToExcel } from '../utils/exportToExcel';
 export default function DashboardOverview({
   kpis,
   setKpis,
-  traders,
-  deposits,
-  withdrawals,
-  gameRounds,
-  setActiveTab,
-  showToast,
+  traders = [],
+  deposits = [],
+  withdrawals = [],
+  gameRounds = [],
+  setActiveTab = () => {},
+  showToast = () => {},
 }) {
-  const [rateInput, setRateInput] = useState(kpis.adminProfitPercent);
-
   const pendingDeposits = deposits.filter((d) => d.status === 'Pending');
   const pendingWithdrawals = withdrawals.filter((w) => w.status === 'Pending');
 
-  const handleUpdateRate = (newRate) => {
-    setKpis((prev) => ({ ...prev, adminProfitPercent: newRate }));
-    setRateInput(newRate);
-    try {
-      localStorage.setItem('paynex_admin_percent', String(newRate));
-    } catch {}
-    showToast(`⚡ Staking Engine rate updated to +${newRate}% Guaranteed`);
-  };
-
-  const handleExportOverviewExcel = () => {
-    const headers = [
-      { label: 'Metric', accessor: 'metric' },
-      { label: 'Value', accessor: 'val' },
-      { label: 'Status / Notes', accessor: 'notes' },
-    ];
-    const rows = [
-      { metric: 'Total Platform Turnover', val: `₹${kpis.totalPlatformVolume.toLocaleString('en-IN')}`, notes: 'Cumulative volume' },
-      { metric: 'Live Staking Pool Disbursed', val: `₹${kpis.liveStakingPool.toLocaleString('en-IN')}`, notes: 'Current round payout reservoir' },
-      { metric: 'Total Registered Traders', val: kpis.totalTraders, notes: 'Active trading community' },
-      { metric: 'Deposits (Today)', val: `₹${kpis.depositsToday.toLocaleString('en-IN')}`, notes: `${pendingDeposits.length} pending verification` },
-      { metric: 'Pending Withdrawals', val: `₹${kpis.pendingWithdrawalsAmount.toLocaleString('en-IN')}`, notes: `${pendingWithdrawals.length} waiting for IMPS release` },
-      { metric: 'Guaranteed Return Engine Rate', val: `+${kpis.adminProfitPercent}%`, notes: 'Fixed payout multiplier' },
-    ];
-    exportToExcel('PAYNEX_Dashboard_KPI_Report', headers, rows);
-    showToast('📊 KPI Report exported to Excel (.csv)');
-  };
+  const pendingDepositsAmount = pendingDeposits.reduce(
+    (sum, d) => sum + (Number(d.amount) || 0),
+    0
+  );
+  const pendingWithdrawalsAmount = pendingWithdrawals.reduce(
+    (sum, w) => sum + (Number(w.amount) || 0),
+    0
+  );
 
   const handleExportRoundsExcel = () => {
     const headers = [
       { label: 'Round ID', accessor: 'id' },
-      { label: 'Asset', accessor: 'asset' },
+      { label: 'Stock / Asset', accessor: 'asset' },
       { label: 'Trader Name', accessor: 'traderName' },
       { label: 'Staked (INR)', accessor: (r) => `₹${r.stakedAmount}` },
       { label: 'Return Rate', accessor: (r) => `+${r.returnPercent}%` },
@@ -55,244 +35,268 @@ export default function DashboardOverview({
       { label: 'Status', accessor: 'status' },
       { label: 'Timestamp', accessor: 'time' },
     ];
-    exportToExcel('PAYNEX_Live_Staking_Rounds', headers, gameRounds);
-    showToast('📊 Staking Rounds exported to Excel (.csv)');
+    exportToExcel('PAYNEX_Live_Trading_Rounds', headers, gameRounds);
+    showToast('📊 Trading rounds log exported to Excel (.csv)');
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Clean Quick Action Ribbon */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      {/* 1. Header Bar with Direct Quick Jump Shortcuts */}
       <div
         className="square-card"
         style={{
-          padding: '10px 16px',
+          padding: '14px 18px',
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '10px',
-          background: '#0e131d',
-          border: '1px solid #1a2233',
+          gap: '12px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: '#f59e0b' }}>
-            ⚡ System Live Hub
-          </span>
-          <span style={{ color: '#2a354d' }}>•</span>
-          <span style={{ fontSize: '12px', color: '#8b9bb4' }}>
-            Multiplayer Room: <strong style={{ color: '#f1f5f9' }}>{kpis.totalTraders} Stakers</strong>
-          </span>
-          <span style={{ color: '#2a354d' }}>•</span>
-          <span style={{ fontSize: '12px', color: '#10b981' }}>
-            ● {kpis.activeTradersNow} Online Now
-          </span>
+        <div>
+          <div style={{ fontSize: '15px', fontWeight: 800, color: '#f1f5f9' }}>
+            System Dashboard Overview
+          </div>
+          <div style={{ fontSize: '12px', color: '#8b9bb4', marginTop: '2px' }}>
+            Real-time live monitoring of deposits, payouts, stocks and active trading
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setActiveTab('stocks_manager')}
+            className="square-btn-primary"
+            style={{ height: '32px', fontSize: '11.5px', padding: '0 12px' }}
+          >
+            📈 Stocks & Return % (50+)
+          </button>
           <button
             onClick={() => setActiveTab('deposits')}
             className="square-btn-secondary"
-            style={{ padding: '5px 12px', fontSize: '11.5px' }}
+            style={{ height: '32px', fontSize: '11.5px', padding: '0 12px' }}
           >
-            Review Deposits ({pendingDeposits.length})
+            💳 Deposits ({pendingDeposits.length})
           </button>
           <button
             onClick={() => setActiveTab('withdrawals')}
             className="square-btn-secondary"
-            style={{ padding: '5px 12px', fontSize: '11.5px' }}
+            style={{ height: '32px', fontSize: '11.5px', padding: '0 12px' }}
           >
-            Review Payouts ({pendingWithdrawals.length})
+            🏧 Withdrawals ({pendingWithdrawals.length})
           </button>
         </div>
       </div>
 
-      {/* 6 Classic KPI Metric Cards */}
+      {/* 2. Four Genuine, Core KPI Cards */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
           gap: '14px',
         }}
       >
-        {/* Card 1: Total Volume */}
-        <div className="square-card" style={{ padding: '16px' }}>
+        {/* Card 1: Deposit Requests (Pending Action) */}
+        <div
+          onClick={() => setActiveTab('deposits')}
+          className="square-card"
+          style={{
+            padding: '18px',
+            borderLeft: pendingDeposits.length > 0 ? '4px solid #f59e0b' : '1px solid #1e2638',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 600, textTransform: 'uppercase' }}>
-              Platform Volume
+            <span style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Pending Deposits
             </span>
-            <span style={{ fontSize: '14px', color: '#8b9bb4' }}>📈</span>
+            <span style={{ fontSize: '15px' }}>💳</span>
           </div>
-          <div style={{ fontSize: '22px', fontWeight: 700, color: '#f1f5f9', fontFamily: 'monospace', marginTop: '6px' }}>
-            ₹{kpis.totalPlatformVolume.toLocaleString('en-IN')}
+          <div style={{ fontSize: '24px', fontWeight: 800, color: '#f59e0b', fontFamily: 'monospace', marginTop: '8px' }}>
+            {pendingDeposits.length}{' '}
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#8b9bb4' }}>
+              (₹{pendingDepositsAmount.toLocaleString('en-IN')})
+            </span>
           </div>
-          <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px', fontWeight: 500 }}>
-            +18.4% this week
+          <div style={{ fontSize: '11.5px', color: pendingDeposits.length > 0 ? '#fbbf24' : '#10b981', marginTop: '6px', fontWeight: 600 }}>
+            {pendingDeposits.length > 0 ? '⚠️ Action Required: Verify UTR & Credit' : '✅ All deposits verified'}
           </div>
         </div>
 
-        {/* Card 2: Live Staking Pool */}
-        <div className="square-card" style={{ padding: '16px' }}>
+        {/* Card 2: Withdrawal Payouts (Pending Action) */}
+        <div
+          onClick={() => setActiveTab('withdrawals')}
+          className="square-card"
+          style={{
+            padding: '18px',
+            borderLeft: pendingWithdrawals.length > 0 ? '4px solid #ef4444' : '1px solid #1e2638',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 600, textTransform: 'uppercase' }}>
-              Live Staking Pool
+            <span style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Pending Payouts
             </span>
-            <span style={{ fontSize: '14px', color: '#8b9bb4' }}>⚡</span>
+            <span style={{ fontSize: '15px' }}>🏧</span>
           </div>
-          <div style={{ fontSize: '22px', fontWeight: 700, color: '#06b6d4', fontFamily: 'monospace', marginTop: '6px' }}>
-            ₹{kpis.liveStakingPool.toLocaleString('en-IN')}
+          <div style={{ fontSize: '24px', fontWeight: 800, color: '#ef4444', fontFamily: 'monospace', marginTop: '8px' }}>
+            {pendingWithdrawals.length}{' '}
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#8b9bb4' }}>
+              (₹{pendingWithdrawalsAmount.toLocaleString('en-IN')})
+            </span>
           </div>
-          <div style={{ fontSize: '11px', color: '#8b9bb4', marginTop: '4px' }}>
-            Active round payout pool
+          <div style={{ fontSize: '11.5px', color: pendingWithdrawals.length > 0 ? '#f87171' : '#10b981', marginTop: '6px', fontWeight: 600 }}>
+            {pendingWithdrawals.length > 0 ? '⚠️ IMPS Payouts Waiting Approval' : '✅ Zero pending payouts'}
           </div>
         </div>
 
-        {/* Card 3: Registered Traders */}
-        <div className="square-card" style={{ padding: '16px' }}>
+        {/* Card 3: Stock Assets & Interest Engine */}
+        <div
+          onClick={() => setActiveTab('stocks_manager')}
+          className="square-card"
+          style={{
+            padding: '18px',
+            borderLeft: '4px solid #10b981',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 600, textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Active Stocks Catalog
+            </span>
+            <span style={{ fontSize: '15px' }}>📈</span>
+          </div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: '#10b981', fontFamily: 'monospace', marginTop: '8px' }}>
+            50+ Assets
+          </div>
+          <div style={{ fontSize: '11.5px', color: '#8b9bb4', marginTop: '6px' }}>
+            Tata Motors (40%), Tesla (45%), Reliance (22%)
+          </div>
+        </div>
+
+        {/* Card 4: Registered Users */}
+        <div
+          onClick={() => setActiveTab('users')}
+          className="square-card"
+          style={{
+            padding: '18px',
+            borderLeft: '4px solid #0284c7',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Total Traders
             </span>
-            <span style={{ fontSize: '14px', color: '#8b9bb4' }}>👥</span>
+            <span style={{ fontSize: '15px' }}>👥</span>
           </div>
-          <div style={{ fontSize: '22px', fontWeight: 700, color: '#f1f5f9', fontFamily: 'monospace', marginTop: '6px' }}>
-            {kpis.totalTraders.toLocaleString('en-IN')}
-          </div>
-          <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px', fontWeight: 500 }}>
-            ● {kpis.activeTradersNow} online now
-          </div>
-        </div>
-
-        {/* Card 4: Deposits (24h) */}
-        <div className="square-card" style={{ padding: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 600, textTransform: 'uppercase' }}>
-              Deposits (24h)
+          <div style={{ fontSize: '24px', fontWeight: 800, color: '#f1f5f9', fontFamily: 'monospace', marginTop: '8px' }}>
+            {traders.length || kpis.totalTraders}{' '}
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#10b981' }}>
+              ● {kpis.activeTradersNow || 2} Active
             </span>
-            <span style={{ fontSize: '14px', color: '#8b9bb4' }}>💳</span>
           </div>
-          <div style={{ fontSize: '22px', fontWeight: 700, color: '#f59e0b', fontFamily: 'monospace', marginTop: '6px' }}>
-            ₹{kpis.depositsToday.toLocaleString('en-IN')}
-          </div>
-          <div style={{ fontSize: '11px', color: '#8b9bb4', marginTop: '4px' }}>
-            {pendingDeposits.length} pending review
-          </div>
-        </div>
-
-        {/* Card 5: Withdrawals Due */}
-        <div className="square-card" style={{ padding: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 600, textTransform: 'uppercase' }}>
-              Pending Withdrawals
-            </span>
-            <span style={{ fontSize: '14px', color: '#8b9bb4' }}>🏧</span>
-          </div>
-          <div style={{ fontSize: '22px', fontWeight: 700, color: '#ef4444', fontFamily: 'monospace', marginTop: '6px' }}>
-            ₹{kpis.pendingWithdrawalsAmount.toLocaleString('en-IN')}
-          </div>
-          <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: 500 }}>
-            {pendingWithdrawals.length} IMPS requests waiting
-          </div>
-        </div>
-
-        {/* Card 6: Fixed Return Rate */}
-        <div className="square-card" style={{ padding: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#8b9bb4', fontWeight: 600, textTransform: 'uppercase' }}>
-              Return Engine
-            </span>
-            <span style={{ fontSize: '14px', color: '#f59e0b' }}>⚡</span>
-          </div>
-          <div style={{ fontSize: '22px', fontWeight: 700, color: '#f59e0b', fontFamily: 'monospace', marginTop: '6px' }}>
-            +{kpis.adminProfitPercent}%
-          </div>
-          <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px', fontWeight: 500 }}>
-            Guaranteed Fixed Payout
+          <div style={{ fontSize: '11.5px', color: '#8b9bb4', marginTop: '6px' }}>
+            Click to manage trader wallets & KYC
           </div>
         </div>
       </div>
 
-      {/* Classic Return Rate Engine Box */}
-      <div className="square-card" style={{ padding: '18px 20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
-          <div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9' }}>
-              Staking Return Rate Controller
-            </div>
-            <div style={{ fontSize: '12px', color: '#8b9bb4', marginTop: '2px' }}>
-              Admin profit return percentage (e.g. ₹5,000 stake earns +{kpis.adminProfitPercent}% = ₹{(5000 * (1 + kpis.adminProfitPercent / 100)).toLocaleString('en-IN')})
+      {/* 3. High-Priority Alert Strip (Only visible if approvals pending) */}
+      {(pendingDeposits.length > 0 || pendingWithdrawals.length > 0) && (
+        <div
+          className="square-card"
+          style={{
+            padding: '12px 16px',
+            background: 'linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, rgba(239, 68, 68, 0.08) 100%)',
+            borderLeft: '4px solid #f59e0b',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '10px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '18px' }}>🔔</span>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>
+                Pending Actions Require Admin Approval
+              </div>
+              <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
+                You have {pendingDeposits.length} deposit requests and {pendingWithdrawals.length} withdrawal requests waiting.
+              </div>
             </div>
           </div>
-          <span className="square-badge badge-gold" style={{ fontSize: '11px', padding: '4px 8px' }}>
-            Current Rate: +{kpis.adminProfitPercent}%
-          </span>
-        </div>
 
-        {/* Preset Buttons + Custom Input */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-          <span style={{ fontSize: '12px', color: '#8b9bb4', marginRight: '4px' }}>Quick Presets:</span>
-          {[15, 20, 25, 30, 40, 50, 75, 100].map((rate) => {
-            const isCur = kpis.adminProfitPercent === rate;
-            return (
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {pendingDeposits.length > 0 && (
               <button
-                key={rate}
-                onClick={() => handleUpdateRate(rate)}
+                onClick={() => setActiveTab('deposits')}
                 style={{
                   padding: '6px 12px',
+                  background: '#f59e0b',
+                  color: '#000',
+                  border: 'none',
                   borderRadius: '0px',
-                  border: isCur ? '1px solid #f59e0b' : '1px solid #1e2638',
-                  background: isCur ? '#f59e0b' : '#141a26',
-                  color: isCur ? '#0b0e14' : '#cbd5e1',
-                  fontWeight: 600,
-                  fontSize: '12px',
+                  fontWeight: 700,
+                  fontSize: '11.5px',
                   cursor: 'pointer',
-                  transition: 'all 0.12s ease',
                 }}
               >
-                +{rate}%
+                Approve Deposits →
               </button>
-            );
-          })}
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
-            <span style={{ fontSize: '12px', color: '#8b9bb4' }}>Custom:</span>
-            <input
-              type="number"
-              min="1"
-              max="200"
-              placeholder="30"
-              value={rateInput}
-              onChange={(e) => setRateInput(e.target.value)}
-              className="square-input"
-              style={{ width: '65px', padding: '5px 8px', fontSize: '12px', textAlign: 'center' }}
-            />
-            <button
-              onClick={() => {
-                const val = Number(rateInput);
-                if (val > 0) handleUpdateRate(val);
-              }}
-              className="square-btn-primary"
-              style={{ padding: '6px 12px', fontSize: '12px' }}
-            >
-              Apply
-            </button>
+            )}
+            {pendingWithdrawals.length > 0 && (
+              <button
+                onClick={() => setActiveTab('withdrawals')}
+                style={{
+                  padding: '6px 12px',
+                  background: '#ef4444',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '0px',
+                  fontWeight: 700,
+                  fontSize: '11.5px',
+                  cursor: 'pointer',
+                }}
+              >
+                Approve Withdrawals →
+              </button>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Live Staking Rounds Excel Grid */}
+      {/* 4. Live Recent Trading Activity Table */}
       <div className="square-card" style={{ padding: '18px 20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '14px',
+            flexWrap: 'wrap',
+            gap: '10px',
+          }}
+        >
           <div>
             <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9' }}>
-              Live Staking Rounds
+              Recent Staking & Trading Activity
             </div>
             <div style={{ fontSize: '12px', color: '#8b9bb4', marginTop: '2px' }}>
-              Real-time trading rounds and automated +{kpis.adminProfitPercent}% payouts
+              Real-time user bets and return payouts on active stocks
             </div>
           </div>
-          <button onClick={handleExportRoundsExcel} className="square-btn-excel" style={{ padding: '6px 12px', fontSize: '12px' }}>
-            Export Rounds (Excel)
+          <button
+            onClick={handleExportRoundsExcel}
+            className="square-btn-excel"
+            style={{ padding: '6px 12px', fontSize: '12px' }}
+          >
+            Export Activity Log (.csv)
           </button>
         </div>
 
@@ -301,18 +305,18 @@ export default function DashboardOverview({
             <thead>
               <tr>
                 <th>Round ID</th>
-                <th>Asset</th>
+                <th>Stock / Asset</th>
                 <th>Trader</th>
                 <th>Stake (INR)</th>
-                <th>Return Rate</th>
-                <th>Profit (INR)</th>
+                <th>Return %</th>
+                <th>Net Profit</th>
                 <th>Total Payout</th>
                 <th>Status</th>
                 <th>Time</th>
               </tr>
             </thead>
             <tbody>
-              {gameRounds.map((round) => (
+              {gameRounds.slice(0, 15).map((round) => (
                 <tr key={round.id}>
                   <td style={{ fontFamily: 'monospace', fontWeight: 600, color: '#f59e0b' }}>
                     {round.id}
