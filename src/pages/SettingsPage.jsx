@@ -124,7 +124,7 @@ export default function SettingsPage({ settings, setSettings, showToast }) {
       )}
 
       {/* Main Settings Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '16px' }}>
         {/* Card 1: Payment Gateway */}
         <div className="square-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ borderBottom: '1px solid #1a2233', paddingBottom: '10px' }}>

@@ -248,7 +248,7 @@ export default function App() {
         />
 
         {/* Dynamic Page Router */}
-        <main className="flex-1 p-4 lg:p-6 max-w-[1600px] w-full mx-auto box-border">
+        <main className="flex-1 p-2.5 sm:p-4 lg:p-6 max-w-[1600px] w-full mx-auto box-border">
           {activeTab === 'dashboard' && (
             <DashboardOverview
               kpis={kpis}

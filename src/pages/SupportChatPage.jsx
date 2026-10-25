@@ -294,27 +294,15 @@ export default function SupportChatPage({ showToast, searchQuery = '' }) {
 
       {/* Main 2-Pane Chat Desk Viewport */}
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '320px 1fr',
-          gap: '14px',
-          flex: 1,
-          minHeight: 0,
-        }}
+        className="grid grid-cols-1 md:grid-cols-[320px_1fr] gap-3.5 flex-1 min-h-0"
       >
         {/* ============================================================== */}
         {/* LEFT PANE: CONVERSATION LIST                                   */}
         {/* ============================================================== */}
         <div
-          className="square-card"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            background: '#0f1420',
-            border: '1px solid #1e283d',
-            padding: 0,
-            overflow: 'hidden',
-          }}
+          className={`square-card flex-col bg-[#0f1420] border border-[#1e283d] p-0 overflow-hidden ${
+            selectedChat ? 'hidden md:flex' : 'flex'
+          }`}
         >
           {/* Filter Bar */}
           <div style={{ padding: '12px', borderBottom: '1px solid #1a2233', background: '#0a0d14' }}>
@@ -435,39 +423,43 @@ export default function SupportChatPage({ showToast, searchQuery = '' }) {
         {/* RIGHT PANE: ACTIVE CHAT TRANSCRIPT & ADMIN REPLY CONTROLS      */}
         {/* ============================================================== */}
         <div
-          className="square-card"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            background: '#0f1420',
-            border: '1px solid #1e283d',
-            padding: 0,
-            overflow: 'hidden',
-          }}
+          className={`square-card flex-col bg-[#0f1420] border border-[#1e283d] p-0 overflow-hidden ${
+            !selectedChat ? 'hidden md:flex' : 'flex'
+          }`}
         >
           {selectedChat ? (
             <>
               {/* Header Bar */}
               <div
                 style={{
-                  padding: '12px 18px',
+                  padding: '12px 14px',
                   background: '#0a0d14',
                   borderBottom: '1px solid #1a2233',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  gap: '8px',
+                  flexWrap: 'wrap',
                 }}
               >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '15px', fontWeight: 800, color: '#f1f5f9' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                  <button
+                    onClick={() => setSelectedChat(null)}
+                    className="md:hidden px-2 py-1 bg-[#182030] hover:bg-[#202b40] text-amber-500 font-bold text-xs border border-[#2b374e] cursor-pointer shrink-0"
+                    style={{ borderRadius: '0px' }}
+                    title="Back to conversation list"
+                  >
+                    ← Back
+                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
+                    <span style={{ fontSize: '14px', fontWeight: 800, color: '#f1f5f9', whiteSpace: 'nowrap' }}>
                       {selectedChat.userName}
                     </span>
-                    <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: '10.5px', color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '1px 5px' }}>
                       {selectedChat.userUid}
                     </span>
-                    <span style={{ fontSize: '11px', color: '#8b9bb4' }}>
-                      {selectedChat.userEmail} • {selectedChat.userPhone}
+                    <span className="hidden sm:inline" style={{ fontSize: '11px', color: '#8b9bb4' }}>
+                      {selectedChat.userEmail}
                     </span>
                   </div>
                 </div>

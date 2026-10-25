@@ -175,8 +175,8 @@ export default function DashboardOverview({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '14px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
+            gap: '12px',
           }}
         >
           {/* Card A: TOTAL USER MONEY INVESTED (INFLOW) */}
@@ -346,8 +346,8 @@ export default function DashboardOverview({
           gap: '6px',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 700, color: '#f1f5f9' }}>Cashflow Balance:</span>
             <span style={{ color: '#10b981', fontWeight: 700 }}>Inflow +₹{totalUserInvested.toLocaleString('en-IN')} ({inflowPercent}%)</span>
             <span style={{ color: '#64748b' }}>vs</span>
