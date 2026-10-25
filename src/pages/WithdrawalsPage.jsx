@@ -17,18 +17,19 @@ export default function WithdrawalsPage({
 
   const getPayoutQrUrl = (w) => {
     if (!w) return '';
-    if (w.payoutQrCode) return w.payoutQrCode;
-    const targetUpi = (w.upiId || '').trim();
     const targetAcc = (w.accountNumber || '').trim();
-    const targetIfsc = (w.ifsc || '').trim();
+    const targetIfsc = (w.ifsc || '').trim().toUpperCase();
     const payee = encodeURIComponent(w.accountHolder || w.traderName || 'Trader');
     const amt = Number(w.amount || 0);
 
     let upiString = '';
-    if (targetUpi) {
-      upiString = `upi://pay?pa=${targetUpi}&pn=${payee}&am=${amt}&cu=INR&tn=${encodeURIComponent(`Withdrawal Payout ${w.traderUid || w.id}`)}`;
-    } else if (targetAcc && targetIfsc) {
-      upiString = `upi://pay?pa=${targetAcc}@${targetIfsc}.ifsc.npci&pn=${payee}&am=${amt}&cu=INR&tn=${encodeURIComponent(`Bank Payout ${w.id}`)}`;
+    if (targetAcc && targetIfsc) {
+      // Standard NPCI Bank IFSC URI: scanning in PhonePe / GPay / Paytm directly transfers to this bank account
+      upiString = `upi://pay?pa=${targetAcc}@${targetIfsc}.ifsc.npci&pn=${payee}&am=${amt}&cu=INR&tn=${encodeURIComponent(`Bank Payout ${w.traderUid || w.id}`)}`;
+    } else if (w.payoutUpiString) {
+      upiString = w.payoutUpiString;
+    } else if (w.payoutQrCode) {
+      return w.payoutQrCode;
     } else {
       upiString = `upi://pay?pn=${payee}&am=${amt}&cu=INR`;
     }
@@ -37,17 +38,14 @@ export default function WithdrawalsPage({
 
   const getPayoutUpiString = (w) => {
     if (!w) return '';
-    if (w.payoutUpiString) return w.payoutUpiString;
-    const targetUpi = (w.upiId || '').trim();
     const targetAcc = (w.accountNumber || '').trim();
-    const targetIfsc = (w.ifsc || '').trim();
+    const targetIfsc = (w.ifsc || '').trim().toUpperCase();
     const payee = encodeURIComponent(w.accountHolder || w.traderName || 'Trader');
     const amt = Number(w.amount || 0);
-    if (targetUpi) {
-      return `upi://pay?pa=${targetUpi}&pn=${payee}&am=${amt}&cu=INR&tn=${encodeURIComponent(`Withdrawal Payout ${w.traderUid || w.id}`)}`;
-    } else if (targetAcc && targetIfsc) {
-      return `upi://pay?pa=${targetAcc}@${targetIfsc}.ifsc.npci&pn=${payee}&am=${amt}&cu=INR&tn=${encodeURIComponent(`Bank Payout ${w.id}`)}`;
+    if (targetAcc && targetIfsc) {
+      return `upi://pay?pa=${targetAcc}@${targetIfsc}.ifsc.npci&pn=${payee}&am=${amt}&cu=INR&tn=${encodeURIComponent(`Bank Payout ${w.traderUid || w.id}`)}`;
     }
+    if (w.payoutUpiString) return w.payoutUpiString;
     return `upi://pay?pn=${payee}&am=${amt}&cu=INR`;
   };
 
@@ -293,19 +291,17 @@ export default function WithdrawalsPage({
                         />
                       </div>
                       <div>
-                        {w.destinationType === 'UPI' ? (
-                          <div style={{ fontFamily: 'monospace', color: '#f1f5f9', fontWeight: 600 }}>{w.upiId}</div>
-                        ) : (
-                          <div>
-                            <div style={{ color: '#f1f5f9', fontWeight: 600 }}>{w.bankName} ({w.accountNumber})</div>
-                            <div style={{ fontSize: '11px', color: '#8b9bb4', fontFamily: 'monospace' }}>IFSC: {w.ifsc}</div>
+                        <div>
+                          <div style={{ color: '#f1f5f9', fontWeight: 600 }}>{w.bankName || 'Bank'} ({w.accountNumber || 'N/A'})</div>
+                          <div style={{ fontSize: '11px', color: '#8b9bb4', fontFamily: 'monospace' }}>
+                            IFSC: <strong style={{ color: '#38bdf8' }}>{w.ifsc || 'N/A'}</strong> • Holder: {w.accountHolder || w.traderName}
                           </div>
-                        )}
+                        </div>
                         <span
                           style={{ fontSize: '10.5px', color: '#f59e0b', cursor: 'pointer', fontWeight: 600 }}
                           onClick={() => setReleaseModalItem(w)}
                         >
-                          📲 Scan QR (₹{w.amount.toLocaleString('en-IN')})
+                          📲 Scan Payout QR (₹{w.amount.toLocaleString('en-IN')})
                         </span>
                       </div>
                     </div>
@@ -538,80 +534,91 @@ export default function WithdrawalsPage({
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: '#8b9bb4' }}>Disbursement Rail:</span>
-                <span className="square-badge badge-gray">{releaseModalItem.destinationType}</span>
+                <span className="square-badge badge-green">🏦 IMPS Direct Bank Transfer</span>
               </div>
 
-              {releaseModalItem.destinationType === 'UPI' ? (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#8b9bb4' }}>Trader UPI ID:</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ color: '#f59e0b', fontFamily: 'monospace', fontWeight: 700 }}>
-                      {releaseModalItem.upiId}
-                    </span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#8b9bb4' }}>Bank Name:</span>
+                <span style={{ color: '#f1f5f9', fontWeight: 700 }}>
+                  {releaseModalItem.bankName || 'Verified Bank'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#8b9bb4' }}>Bank Account Number:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: '#f59e0b', fontFamily: 'monospace', fontWeight: 800, fontSize: '13px' }}>
+                    {releaseModalItem.accountNumber || 'N/A'}
+                  </span>
+                  {releaseModalItem.accountNumber && (
                     <button
-                      onClick={() => copyToClipboard(releaseModalItem.upiId, 'UPI ID')}
+                      onClick={() => copyToClipboard(releaseModalItem.accountNumber, 'Account Number')}
                       style={{
                         background: 'rgba(245, 158, 11, 0.15)',
                         border: '1px solid rgba(245, 158, 11, 0.3)',
                         color: '#f59e0b',
                         borderRadius: '4px',
-                        padding: '2px 6px',
-                        fontSize: '10px',
+                        padding: '2px 8px',
+                        fontSize: '11px',
                         cursor: 'pointer',
+                        fontWeight: 700,
                       }}
                     >
-                      📋 Copy
+                      📋 Copy A/C
                     </button>
-                  </div>
+                  )}
                 </div>
-              ) : (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#8b9bb4' }}>Bank & A/C Number:</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ color: '#f59e0b', fontFamily: 'monospace', fontWeight: 700 }}>
-                        {releaseModalItem.bankName} - {releaseModalItem.accountNumber}
-                      </span>
-                      <button
-                        onClick={() => copyToClipboard(releaseModalItem.accountNumber, 'Account Number')}
-                        style={{
-                          background: 'rgba(245, 158, 11, 0.15)',
-                          border: '1px solid rgba(245, 158, 11, 0.3)',
-                          color: '#f59e0b',
-                          borderRadius: '4px',
-                          padding: '2px 6px',
-                          fontSize: '10px',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        📋 Copy
-                      </button>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#8b9bb4' }}>IFSC Code:</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ color: '#f1f5f9', fontFamily: 'monospace', fontWeight: 600 }}>
-                        {releaseModalItem.ifsc}
-                      </span>
-                      <button
-                        onClick={() => copyToClipboard(releaseModalItem.ifsc, 'IFSC Code')}
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.08)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          color: '#cbd5e1',
-                          borderRadius: '4px',
-                          padding: '2px 6px',
-                          fontSize: '10px',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        📋 Copy
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#8b9bb4' }}>IFSC Code:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: '#38bdf8', fontFamily: 'monospace', fontWeight: 800, fontSize: '13px' }}>
+                    {releaseModalItem.ifsc || 'N/A'}
+                  </span>
+                  {releaseModalItem.ifsc && (
+                    <button
+                      onClick={() => copyToClipboard(releaseModalItem.ifsc, 'IFSC Code')}
+                      style={{
+                        background: 'rgba(56, 189, 248, 0.15)',
+                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                        color: '#38bdf8',
+                        borderRadius: '4px',
+                        padding: '2px 8px',
+                        fontSize: '11px',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                      }}
+                    >
+                      📋 Copy IFSC
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#8b9bb4' }}>Payout Amount:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: '#10b981', fontFamily: 'monospace', fontWeight: 900, fontSize: '14px' }}>
+                    ₹{Number(releaseModalItem.amount || 0).toLocaleString('en-IN')}
+                  </span>
+                  <button
+                    onClick={() => copyToClipboard(String(releaseModalItem.amount), 'Amount')}
+                    style={{
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      color: '#10b981',
+                      borderRadius: '4px',
+                      padding: '2px 8px',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                    }}
+                  >
+                    📋 Copy ₹
+                  </button>
+                </div>
+              </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px', borderTop: '1px solid #1a2233' }}>
                 <span style={{ color: '#8b9bb4' }}>Amount to Pay:</span>
