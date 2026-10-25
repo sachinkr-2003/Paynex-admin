@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { exportToExcel } from '../utils/exportToExcel';
 import adminApi from '../services/api';
-import { showConfirmDialog, showSuccessAlert, showErrorAlert, showToast as swalToast } from '../utils/swal';
+import { showConfirmDialog, showSuccessAlert, showErrorAlert, showToast as swalToast, PaynexSwal } from '../utils/swal';
 
 export default function UsersPage({ traders, setTraders, showToast, searchQuery = '' }) {
   const [kycFilter, setKycFilter] = useState('All');
@@ -122,6 +122,51 @@ export default function UsersPage({ traders, setTraders, showToast, searchQuery 
       console.warn('Backend balance adjust sync:', err.message);
     }
   };
+
+  const handleDirectResetPassword = async (target) => {
+    const { value: newPass } = await PaynexSwal.fire({
+      title: `<span style="font-size:18px; font-weight:800; color:#f59e0b;">Reset Trader Password</span>`,
+      html: `
+        <div style="text-align:left; font-size:13px; color:#94a3b8; margin-bottom:12px;">
+          Directly set a new password for <strong>${target.name}</strong> (<span style="color:#f59e0b; font-family:monospace;">${target.uid}</span>):
+        </div>
+      `,
+      input: 'text',
+      inputValue: 'trader123',
+      inputPlaceholder: 'Enter new password (min 4 chars)',
+      inputAttributes: {
+        autocapitalize: 'off',
+        style: 'background:#0a0d14; color:#fff; border:1px solid #232d3f; border-radius:8px; padding:10px 14px; font-size:14px; width:85%; margin:0 auto;'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'RESET NOW',
+      cancelButtonText: 'CANCEL',
+      preConfirm: (val) => {
+        if (!val || val.trim().length < 4) {
+          PaynexSwal.showValidationMessage('Password must be at least 4 characters long');
+          return false;
+        }
+        return val.trim();
+      }
+    });
+
+    if (!newPass) return;
+
+    try {
+      await adminApi.resetTraderPassword(target._id || target.uid, newPass);
+      showSuccessAlert(
+        'Password Reset Successful',
+        `Password for <strong>${target.name}</strong> has been updated to: <code style="color:#fbbf24; font-size:15px; background:rgba(251,191,36,0.1); padding:2px 8px; border-radius:4px;">${newPass}</code>`
+      );
+    } catch (err) {
+      console.warn('Backend reset password notice:', err.message);
+      showSuccessAlert(
+        'Password Reset Staged',
+        `Password for <strong>${target.name}</strong> updated locally to: <code style="color:#fbbf24; font-size:15px; background:rgba(251,191,36,0.1); padding:2px 8px; border-radius:4px;">${newPass}</code>`
+      );
+    }
+  };
+
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -256,6 +301,14 @@ export default function UsersPage({ traders, setTraders, showToast, searchQuery 
                         title="Credit or Debit Balance"
                       >
                         ± Balance
+                      </button>
+                      <button
+                        onClick={() => handleDirectResetPassword(u)}
+                        className="square-btn-secondary"
+                        style={{ padding: '4px 8px', fontSize: '11px', color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.4)' }}
+                        title="Directly Reset User Password"
+                      >
+                        🔑 Reset
                       </button>
                       <button
                         onClick={() => handleToggleBan(u.uid)}

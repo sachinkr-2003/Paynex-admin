@@ -8,6 +8,7 @@ import WithdrawalsPage from './pages/WithdrawalsPage';
 import UsersPage from './pages/UsersPage';
 import SettingsPage from './pages/SettingsPage';
 import StocksManagerPage from './pages/StocksManagerPage';
+import SupportChatPage from './pages/SupportChatPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import {
   initialKPIs,
@@ -296,6 +297,13 @@ export default function App() {
             <UsersPage
               traders={traders}
               setTraders={setTraders}
+              showToast={showToast}
+              searchQuery={searchQuery}
+            />
+          )}
+
+          {activeTab === 'support_chat' && (
+            <SupportChatPage
               showToast={showToast}
               searchQuery={searchQuery}
             />

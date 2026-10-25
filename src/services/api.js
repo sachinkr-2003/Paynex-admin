@@ -56,6 +56,11 @@ export const adminApi = {
       method: 'PUT',
       body: JSON.stringify(updates),
     }),
+  resetTraderPassword: (userId, newPassword) =>
+    request(`/admin/users/${userId}/reset-password`, {
+      method: 'PUT',
+      body: JSON.stringify({ newPassword }),
+    }),
 
   // Deposits
   getDeposits: (params = '') => request(`/admin/deposits${params ? `?${params}` : ''}`),
@@ -122,6 +127,22 @@ export const adminApi = {
   deleteAsset: (id) =>
     request(`/assets/admin/${encodeURIComponent(id)}`, {
       method: 'DELETE',
+    }),
+
+  // AI Support Chat Desk
+  getChatThreads: (params = '') =>
+    request(`/chat/admin/all${params ? `?${params}` : ''}`),
+  getChatById: (id) =>
+    request(`/chat/admin/${encodeURIComponent(id)}`),
+  sendAdminChatReply: (id, text, officerName = 'PAYNEX Support Officer') =>
+    request(`/chat/admin/${encodeURIComponent(id)}/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ text, officerName }),
+    }),
+  updateChatStatus: (id, status, aiEnabled) =>
+    request(`/chat/admin/${encodeURIComponent(id)}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, aiEnabled }),
     }),
 };
 

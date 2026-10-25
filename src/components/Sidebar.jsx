@@ -47,6 +47,13 @@ export default function Sidebar({
       badge: null,
     },
     {
+      id: 'support_chat',
+      label: 'AI Support Chat',
+      icon: '💬',
+      badge: 'LIVE AI',
+      badgeColor: 'bg-amber-500/15 text-amber-400 border border-amber-500/30',
+    },
+    {
       id: 'settings',
       label: 'Payment & UPI Settings',
       icon: '⚙️',

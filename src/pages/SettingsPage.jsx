@@ -52,7 +52,7 @@ export default function SettingsPage({ settings, setSettings, showToast }) {
       { key: 'Default Guaranteed Profit Rate', val: `+${formData.defaultGameProfitPercent}%`, category: 'Staking Engine' },
       { key: 'Helpline Number', val: formData.supportHelpline, category: 'Support' },
       { key: 'Support Email', val: formData.supportEmail, category: 'Support' },
-      { key: 'WhatsApp Care', val: formData.whatsappCare, category: 'Support' },
+      { key: 'Support Desk Line', val: formData.whatsappCare, category: 'Support' },
       { key: 'Telegram Channel', val: formData.telegramChannel, category: 'Support' },
       { key: 'Emergency Platform Freeze', val: formData.emergencyFreeze ? 'ACTIVE' : 'NORMAL', category: 'Security' },
       { key: 'Auto-Approve KYC', val: formData.autoApproveKyc ? 'ENABLED' : 'DISABLED', category: 'Security' },
@@ -229,7 +229,7 @@ export default function SettingsPage({ settings, setSettings, showToast }) {
 
           <div>
             <label style={{ display: 'block', fontSize: '11.5px', color: '#8b9bb4', marginBottom: '4px' }}>
-              WhatsApp Care Number
+              Priority Support Line
             </label>
             <input
               type="text"
