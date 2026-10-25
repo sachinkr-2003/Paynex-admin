@@ -265,26 +265,39 @@ export default function DepositsPage({
                       className={`square-badge ${
                         d.status === 'Approved'
                           ? 'badge-green'
+                          : d.status === 'Verified' || d.isRealPaymentVerified
+                          ? 'badge-green'
                           : d.status === 'Under Review'
                           ? 'badge-gold'
                           : d.status === 'Pending'
                           ? 'badge-cyan'
                           : 'badge-red'
                       }`}
-                      style={d.status === 'Under Review' ? { animation: 'pulse 2s infinite', fontWeight: 800 } : {}}
+                      style={
+                        d.status === 'Verified' || d.isRealPaymentVerified
+                          ? { background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#10b981', fontWeight: 800 }
+                          : d.status === 'Under Review'
+                          ? { animation: 'pulse 2s infinite', fontWeight: 800 }
+                          : {}
+                      }
                     >
-                      {d.status === 'Under Review' ? '🟡 Under Review' : d.status}
+                      {d.status === 'Verified' || d.isRealPaymentVerified
+                        ? '🟢 Real Payment Verified'
+                        : d.status === 'Under Review'
+                        ? '🟡 Under Review'
+                        : d.status}
                     </span>
                   </td>
                   <td>
-                    {d.status === 'Pending' || d.status === 'Under Review' ? (
+                    {d.status === 'Verified' || d.isRealPaymentVerified || d.status === 'Under Review' ? (
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                         <button
                           onClick={() => handleApproveDeposit(d)}
                           className="square-btn-success"
                           style={{ padding: '4px 10px', fontSize: '11px', fontWeight: 800 }}
+                          title="Real payment confirmed! Click to credit trader wallet."
                         >
-                          ✓ Approve
+                          ✓ Approve & Credit
                         </button>
                         <button
                           onClick={() => handleRejectDeposit(d)}
@@ -294,9 +307,13 @@ export default function DepositsPage({
                           ✕ Reject
                         </button>
                       </div>
+                    ) : d.status === 'Pending' ? (
+                      <div style={{ textAlign: 'center', fontSize: '10.5px', color: '#f59e0b', fontWeight: 600 }}>
+                        ⏳ Awaiting Bank Credit
+                      </div>
                     ) : (
                       <div style={{ textAlign: 'center', fontSize: '11px', color: '#64748b' }}>
-                        Settled
+                        Settled ({d.status})
                       </div>
                     )}
                   </td>

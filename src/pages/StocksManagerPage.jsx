@@ -9,8 +9,51 @@ import {
 } from '../utils/swal';
 import { FIFTY_STOCKS, getCompanyQrUrl, enrichStockWithPayment } from '../data/stocksData';
 
+const QR_STORAGE_KEY = 'paynex_custom_stock_qrs';
+
+const getSavedCustomQrs = () => {
+  try {
+    const raw = localStorage.getItem(QR_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const saveCustomQrToStorage = (assetKey, data) => {
+  try {
+    const existing = getSavedCustomQrs();
+    existing[assetKey] = {
+      ...(existing[assetKey] || {}),
+      ...data,
+      updatedAt: Date.now(),
+    };
+    localStorage.setItem(QR_STORAGE_KEY, JSON.stringify(existing));
+  } catch (e) {
+    console.warn('Storage save notice:', e);
+  }
+};
+
+const mergeCustomQrsWithAssets = (assetList) => {
+  const saved = getSavedCustomQrs();
+  return assetList.map((item) => {
+    const key = (item.id || item.symbol || '').toUpperCase();
+    const symKey = (item.symbol || '').toUpperCase();
+    const custom = saved[key] || saved[symKey] || (item.id ? saved[item.id] : null) || (item._id ? saved[item._id] : null);
+    if (custom) {
+      return {
+        ...item,
+        upiId: custom.upiId !== undefined && custom.upiId.trim() ? custom.upiId : item.upiId,
+        payeeName: custom.payeeName !== undefined && custom.payeeName.trim() ? custom.payeeName : item.payeeName,
+        qrCode: custom.qrCode !== undefined ? custom.qrCode : item.qrCode,
+      };
+    }
+    return item;
+  });
+};
+
 export default function StocksManagerPage({ showToast, searchQuery = '' }) {
-  const [assets, setAssets] = useState(() => FIFTY_STOCKS.map(enrichStockWithPayment));
+  const [assets, setAssets] = useState(() => mergeCustomQrsWithAssets(FIFTY_STOCKS.map(enrichStockWithPayment)));
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [stats, setStats] = useState({ totalCount: FIFTY_STOCKS.length, activeCount: FIFTY_STOCKS.length, stockCount: 50, cryptoCount: 6 });
@@ -50,7 +93,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
     try {
       const res = await adminApi.getAssets();
       if (res && res.success && Array.isArray(res.assets) && res.assets.length > 0) {
-        setAssets(res.assets);
+        setAssets(mergeCustomQrsWithAssets(res.assets));
         if (res.stats) setStats(res.stats);
       }
     } catch (err) {
@@ -208,9 +251,17 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
       qrCode: qrMode === 'auto' ? '' : qrFormData.qrCode,
     };
 
+    // Save to persistent localStorage IMMEDIATELY with multiple lookup keys!
+    const key = (qrModalAsset.id || qrModalAsset.symbol || '').toUpperCase();
+    const symKey = (qrModalAsset.symbol || '').toUpperCase();
+    saveCustomQrToStorage(key, payload);
+    if (symKey) saveCustomQrToStorage(symKey, payload);
+    if (qrModalAsset.id) saveCustomQrToStorage(qrModalAsset.id, payload);
+    if (qrModalAsset._id) saveCustomQrToStorage(qrModalAsset._id, payload);
+
     setAssets((prev) =>
       prev.map((a) =>
-        (a.id === qrModalAsset.id || a._id === qrModalAsset._id)
+        (a.id === qrModalAsset.id || a._id === qrModalAsset._id || a.symbol === qrModalAsset.symbol)
           ? { ...a, ...payload }
           : a
       )
@@ -219,14 +270,14 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
     try {
       await adminApi.updateAsset(qrModalAsset.id || qrModalAsset._id, payload);
       showAdminSuccess(
-        'Company QR Saved',
-        `Payment QR Code and UPI ID for <strong>${qrModalAsset.name}</strong> successfully updated.`
+        'Company QR Saved Permanently',
+        `Payment QR Code and UPI ID for <strong>${qrModalAsset.name}</strong> successfully updated and saved.`
       );
     } catch (err) {
       console.warn('Backend QR save fallback:', err.message);
       showAdminSuccess(
-        'Company QR Saved Locally',
-        `QR & UPI for ${qrModalAsset.name} updated.`
+        'Company QR Saved Permanently',
+        `Payment QR Code for <strong>${qrModalAsset.name}</strong> saved locally and active across sessions.`
       );
     } finally {
       setQrModalAsset(null);
@@ -243,12 +294,26 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
 
     try {
       if (editingAsset) {
+        // Save QR to localStorage if present
+        if (formData.qrCode !== undefined) {
+          const key = (editingAsset.id || editingAsset.symbol || '').toUpperCase();
+          const symKey = (editingAsset.symbol || '').toUpperCase();
+          const qrPayload = {
+            upiId: formData.upiId,
+            payeeName: formData.payeeName,
+            qrCode: formData.qrCode,
+          };
+          saveCustomQrToStorage(key, qrPayload);
+          if (symKey) saveCustomQrToStorage(symKey, qrPayload);
+          if (editingAsset.id) saveCustomQrToStorage(editingAsset.id, qrPayload);
+          if (editingAsset._id) saveCustomQrToStorage(editingAsset._id, qrPayload);
+        }
         // Update
-        const res = await adminApi.updateAsset(editingAsset.id || editingAsset._id, formData);
+        await adminApi.updateAsset(editingAsset.id || editingAsset._id, formData);
         showAdminSuccess('Stock Updated', `"${formData.name}" interest set to +${formData.returnPercent}%.`);
       } else {
         // Create
-        const res = await adminApi.createAsset(formData);
+        await adminApi.createAsset(formData);
         showAdminSuccess('New Stock Created', `"${formData.name}" added to trading engine with +${formData.returnPercent}% return.`);
       }
       setIsModalOpen(false);

@@ -784,26 +784,43 @@ export const FIFTY_STOCKS = [
   },
 ];
 
+export const getCustomQrOverride = (stock) => {
+  try {
+    const raw = localStorage.getItem('paynex_custom_stock_qrs');
+    if (!raw) return null;
+    const map = JSON.parse(raw);
+    const key = (stock?.id || stock?.symbol || '').toUpperCase();
+    const symKey = (stock?.symbol || '').toUpperCase();
+    return map[key] || map[symKey] || (stock?.id ? map[stock.id] : null) || (stock?._id ? map[stock._id] : null) || null;
+  } catch {
+    return null;
+  }
+};
+
 export const getCompanyQrUrl = (stock) => {
-  if (stock?.qrCode && stock.qrCode.trim().length > 0) {
-    return stock.qrCode;
+  const custom = getCustomQrOverride(stock);
+  const effectiveQr = custom?.qrCode || stock?.qrCode;
+  if (effectiveQr && effectiveQr.trim().length > 0) {
+    return effectiveQr;
   }
   const cleanSym = (stock?.symbol || stock?.id || 'stock').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const upiId = stock?.upiId || `${cleanSym}.paynex@icici`;
-  const payee = encodeURIComponent(stock?.payeeName || `${stock?.name || 'Company'} Trading Desk`);
+  const upiId = custom?.upiId || stock?.upiId || `${cleanSym}.paynex@icici`;
+  const payee = encodeURIComponent(custom?.payeeName || stock?.payeeName || `${stock?.name || 'Company'} Trading Desk`);
   const upiString = `upi://pay?pa=${upiId}&pn=${payee}&cu=INR`;
   return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiString)}`;
 };
 
 export const enrichStockWithPayment = (s) => {
   const cleanSym = (s.symbol || s.id || 'stock').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const defaultUpi = s.upiId || `${cleanSym}.paynex@icici`;
-  const defaultPayee = s.payeeName || `${s.name} Trading Desk`;
+  const custom = getCustomQrOverride(s);
+  const defaultUpi = custom?.upiId || s.upiId || `${cleanSym}.paynex@icici`;
+  const defaultPayee = custom?.payeeName || s.payeeName || `${s.name} Trading Desk`;
+  const defaultQr = custom?.qrCode !== undefined ? custom.qrCode : (s.qrCode || '');
   return {
     ...s,
     upiId: defaultUpi,
     payeeName: defaultPayee,
-    qrCode: s.qrCode || '',
+    qrCode: defaultQr,
   };
 };
 
