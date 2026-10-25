@@ -114,10 +114,46 @@ export default function DepositsPage({
     }
   };
 
-  const pendingCount = deposits.filter((d) => d.status === 'Pending').length;
+  const pendingCount = deposits.filter((d) => d.status === 'Pending' || d.status === 'Under Review').length;
+  const underReviewCount = deposits.filter((d) => d.status === 'Under Review').length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Real-time Under Review Queue Alert */}
+      {underReviewCount > 0 && (
+        <div
+          style={{
+            padding: '12px 18px',
+            borderRadius: '10px',
+            backgroundColor: 'rgba(245, 158, 11, 0.12)',
+            border: '1.5px solid rgba(245, 158, 11, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '20px' }}>🔔</span>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: '#f59e0b' }}>
+                {underReviewCount} UTR Submission(s) Awaiting Review
+              </div>
+              <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                Traders have submitted 12-digit UTR references via UPI Gateway. Check bank statement and approve to credit wallet balance.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setStatusFilter('Under Review')}
+            className="square-btn-primary"
+            style={{ fontSize: '11.5px', padding: '6px 12px' }}
+          >
+            Filter Under Review ({underReviewCount})
+          </button>
+        </div>
+      )}
+
       {/* Header Bar */}
       <div
         className="square-card"
@@ -135,8 +171,13 @@ export default function DepositsPage({
             Deposit Verification Queue
           </span>
           <span className="square-badge badge-cyan">
-            {pendingCount} Pending Verification
+            {pendingCount} Total In Queue
           </span>
+          {underReviewCount > 0 && (
+            <span className="square-badge badge-gold" style={{ animation: 'pulse 2s infinite' }}>
+              🟡 {underReviewCount} Under Review
+            </span>
+          )}
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
@@ -147,6 +188,7 @@ export default function DepositsPage({
             style={{ height: '32px', fontSize: '12px', padding: '4px 10px' }}
           >
             <option value="All">All Transactions</option>
+            <option value="Under Review">🟡 Under Review Only ({underReviewCount})</option>
             <option value="Pending">Pending Only</option>
             <option value="Approved">Approved Only</option>
             <option value="Rejected">Rejected Only</option>
@@ -223,28 +265,33 @@ export default function DepositsPage({
                       className={`square-badge ${
                         d.status === 'Approved'
                           ? 'badge-green'
-                          : d.status === 'Pending'
+                          : d.status === 'Under Review'
                           ? 'badge-gold'
+                          : d.status === 'Pending'
+                          ? 'badge-cyan'
                           : 'badge-red'
                       }`}
+                      style={d.status === 'Under Review' ? { animation: 'pulse 2s infinite', fontWeight: 800 } : {}}
                     >
-                      {d.status}
+                      {d.status === 'Under Review' ? '🟡 Under Review' : d.status}
                     </span>
                   </td>
                   <td>
-                    {d.status === 'Pending' ? (
+                    {d.status === 'Pending' || d.status === 'Under Review' ? (
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                         <button
                           onClick={() => handleApproveDeposit(d)}
                           className="square-btn-success"
+                          style={{ padding: '4px 10px', fontSize: '11px', fontWeight: 800 }}
                         >
-                          Approve
+                          ✓ Approve
                         </button>
                         <button
                           onClick={() => handleRejectDeposit(d)}
                           className="square-btn-danger"
+                          style={{ padding: '4px 8px', fontSize: '11px' }}
                         >
-                          Reject
+                          ✕ Reject
                         </button>
                       </div>
                     ) : (
