@@ -90,6 +90,11 @@ export const adminApi = {
       method: 'PUT',
       body: JSON.stringify({ profitPercent }),
     }),
+  distributeDailyInterest: (force = true) =>
+    request('/admin/distribute-daily-interest', {
+      method: 'POST',
+      body: JSON.stringify({ force }),
+    }),
 
   // Plans
   getPlans: () => request('/plans'),

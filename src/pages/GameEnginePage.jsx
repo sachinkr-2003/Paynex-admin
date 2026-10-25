@@ -48,6 +48,28 @@ export default function GameEnginePage({
     }
   };
 
+  const [isDistributing, setIsDistributing] = useState(false);
+
+  const handleTrigger5AmInterest = async () => {
+    try {
+      setIsDistributing(true);
+      const res = await adminApi.distributeDailyInterest(true);
+      if (res && res.success) {
+        showAdminSuccess(
+          '5:00 AM Interest Distributed!',
+          res.message || `Processed ${res.processedCount} active investments. Total ₹${res.totalDistributed} credited.`
+        );
+        showToast(`⚡ Interest Credited: ₹${res.totalDistributed} across ${res.processedCount} contracts`);
+      } else {
+        showAdminWarning('Notice', res?.message || 'Could not process interest distribution.');
+      }
+    } catch (err) {
+      showAdminError('Distribution Failed', err.message);
+    } finally {
+      setIsDistributing(false);
+    }
+  };
+
   const handleExportEngineExcel = () => {
     const headers = [
       { label: 'Round ID', accessor: 'id' },
@@ -69,6 +91,74 @@ export default function GameEnginePage({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* ⏰ Automated 5:00 AM Stock Daily Interest Engine Banner */}
+      <div
+        className="square-card"
+        style={{
+          padding: '16px 20px',
+          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%)',
+          border: '1.5px solid rgba(245, 158, 11, 0.4)',
+          borderRadius: '12px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '14px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '10px',
+              background: 'rgba(245, 158, 11, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+            }}
+          >
+            ⏰
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '15px', fontWeight: 800, color: '#ffffff' }}>
+                Automated 05:00 AM Stock Interest Engine
+              </span>
+              <span className="square-badge badge-green" style={{ fontSize: '10px', padding: '2px 8px' }}>
+                ACTIVE (Asia/Kolkata) ✅
+              </span>
+            </div>
+            <div style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '3px', lineHeight: 1.4 }}>
+              Har subah <strong style={{ color: '#fbbf24' }}>05:00 AM IST</strong> par sabhi active stock investments pe unka set daily interest (e.g. Tata Motors ₹500 pe 4% = ₹20) automatically users ke wallet me add ho jata hai.
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handleTrigger5AmInterest}
+          disabled={isDistributing}
+          style={{
+            padding: '10px 18px',
+            background: isDistributing ? '#64748b' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+            color: '#000000',
+            border: 'none',
+            borderRadius: '8px',
+            fontWeight: 800,
+            fontSize: '12px',
+            cursor: isDistributing ? 'not-allowed' : 'pointer',
+            boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {isDistributing ? '⏳ Processing...' : '⚡ Trigger 5:00 AM Interest (Manual Test)'}
+        </button>
+      </div>
+
       {/* Header Bar */}
       <div
         className="square-card"
