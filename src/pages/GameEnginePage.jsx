@@ -30,8 +30,8 @@ export default function GameEnginePage({
 
   const handleApplyRate = async (rate) => {
     const num = Number(rate);
-    if (!num || num < 1 || num > 500) {
-      showAdminWarning('Invalid Rate', 'Please enter a valid rate between 1% and 500%.');
+    if (!num || num < 2 || num > 12) {
+      showAdminWarning('Invalid Rate', 'Please select a rate between 2% and 12% (Max 12%).');
       return;
     }
     setSelectedRate(num);
@@ -150,11 +150,11 @@ export default function GameEnginePage({
             Adjust Fixed Return Rate
           </div>
           <div style={{ fontSize: '12px', color: '#8b9bb4', marginBottom: '14px' }}>
-            Controls user winnings multiplier (e.g. 30% means 1.3x payout)
+            Controls user winnings multiplier (Strictly 2% Min to 12% Max)
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
-            {[10, 15, 20, 25, 30, 40, 50, 75, 100].map((rate) => {
+            {[2, 3, 4, 5, 6, 8, 10, 12].map((rate) => {
               const isSelected = kpis.adminProfitPercent === rate;
               return (
                 <button
@@ -181,7 +181,9 @@ export default function GameEnginePage({
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <input
               type="number"
-              placeholder="Custom % rate"
+              min="2"
+              max="12"
+              placeholder="2% to 12%"
               value={customRate}
               onChange={(e) => setCustomRate(e.target.value)}
               className="square-input"

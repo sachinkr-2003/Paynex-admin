@@ -228,7 +228,7 @@ export default function Sidebar({
                 ₹1,25,00,000
               </div>
               <div className="text-[10px] text-slate-500 mt-0.5">
-                Engine: <span className="text-amber-500 font-semibold">+30% Active</span>
+                Engine: <span className="text-amber-500 font-semibold">+12% Max Engine</span>
               </div>
             </>
           ) : (

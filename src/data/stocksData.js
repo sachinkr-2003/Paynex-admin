@@ -797,7 +797,7 @@ export const getCustomQrOverride = (stock) => {
   }
 };
 
-export const getCompanyQrUrl = (stock) => {
+export const getCompanyQrUrl = (stock, amount = null) => {
   const custom = getCustomQrOverride(stock);
   const effectiveQr = custom?.qrCode || stock?.qrCode;
   if (effectiveQr && effectiveQr.trim().length > 0) {
@@ -806,7 +806,8 @@ export const getCompanyQrUrl = (stock) => {
   const cleanSym = (stock?.symbol || stock?.id || 'stock').toLowerCase().replace(/[^a-z0-9]/g, '');
   const upiId = custom?.upiId || stock?.upiId || `${cleanSym}.paynex@icici`;
   const payee = encodeURIComponent(custom?.payeeName || stock?.payeeName || `${stock?.name || 'Company'} Trading Desk`);
-  const upiString = `upi://pay?pa=${upiId}&pn=${payee}&cu=INR`;
+  const amtParam = amount && Number(amount) > 0 ? `&am=${Number(amount)}` : '';
+  const upiString = `upi://pay?pa=${upiId}&pn=${payee}${amtParam}&cu=INR`;
   return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiString)}`;
 };
 
@@ -816,8 +817,13 @@ export const enrichStockWithPayment = (s) => {
   const defaultUpi = custom?.upiId || s.upiId || `${cleanSym}.paynex@icici`;
   const defaultPayee = custom?.payeeName || s.payeeName || `${s.name} Trading Desk`;
   const defaultQr = custom?.qrCode !== undefined ? custom.qrCode : (s.qrCode || '');
+  const rawRet = Number(custom?.returnPercent ?? s.returnPercent ?? 5);
+  const effectiveReturn = Math.min(12, Math.max(2, rawRet > 12 ? Math.round(2 + ((rawRet - 15) / 28) * 10) : rawRet));
+
   return {
     ...s,
+    returnPercent: effectiveReturn,
+    minStake: 100,
     upiId: defaultUpi,
     payeeName: defaultPayee,
     qrCode: defaultQr,

@@ -9,7 +9,7 @@ export const initialKPIs = {
   depositsToday: 0,
   pendingWithdrawalsCount: 0,
   pendingWithdrawalsAmount: 0,
-  adminProfitPercent: 30, // 30% Fixed Return Engine
+  adminProfitPercent: 5, // 2% - 12% Fixed Return Engine
   reserveBalance: 0,
 };
 

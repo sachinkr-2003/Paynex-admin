@@ -44,7 +44,7 @@ export default function DepositsPage({
   };
 
   const handleApproveDeposit = async (deposit) => {
-    if (deposit.status === 'Approved') return;
+    if (deposit.status === 'Approved' || deposit.status === 'Success') return;
 
     const confirmed = await showConfirmDialog(
       'Approve Deposit Payment',
@@ -54,40 +54,45 @@ export default function DepositsPage({
     );
     if (!confirmed) return;
 
-    setDeposits((prev) =>
-      prev.map((d) => (d.id === deposit.id ? { ...d, status: 'Approved' } : d))
-    );
-
-    setTraders((prev) =>
-      prev.map((u) => {
-        if (u.uid === deposit.traderUid) {
-          return { ...u, balance: u.balance + deposit.amount };
-        }
-        return u;
-      })
-    );
-
-    setKpis((prev) => {
-      const newInvested = (prev.totalUserInvested || 0) + deposit.amount;
-      const currentPaid = prev.totalPaidOut || 0;
-      return {
-        ...prev,
-        depositsToday: (prev.depositsToday || 0) + deposit.amount,
-        totalPlatformVolume: (prev.totalPlatformVolume || 0) + deposit.amount,
-        totalUserInvested: newInvested,
-        netPlatformProfit: newInvested - currentPaid,
-      };
-    });
-
-    showSuccessAlert(
-      'Deposit Approved & Credited',
-      `₹${deposit.amount.toLocaleString('en-IN')} has been added to ${deposit.traderName}'s live wallet balance.`
-    );
-
     try {
-      await adminApi.approveDeposit(deposit._id || deposit.id);
+      const res = await adminApi.approveDeposit(deposit._id || deposit.id);
+
+      setDeposits((prev) =>
+        prev.map((d) =>
+          (d._id && deposit._id && d._id === deposit._id) || d.id === deposit.id
+            ? { ...d, status: 'Approved', ...(res.deposit || {}) }
+            : d
+        )
+      );
+
+      setTraders((prev) =>
+        prev.map((u) => {
+          if (u.uid === deposit.traderUid || (u._id && deposit.userId && u._id === deposit.userId)) {
+            return { ...u, balance: res.newBalance !== undefined ? res.newBalance : u.balance + deposit.amount };
+          }
+          return u;
+        })
+      );
+
+      setKpis((prev) => {
+        const newInvested = (prev.totalUserInvested || 0) + deposit.amount;
+        const currentPaid = prev.totalPaidOut || 0;
+        return {
+          ...prev,
+          depositsToday: (prev.depositsToday || 0) + deposit.amount,
+          totalPlatformVolume: (prev.totalPlatformVolume || 0) + deposit.amount,
+          totalUserInvested: newInvested,
+          netPlatformProfit: newInvested - currentPaid,
+        };
+      });
+
+      showSuccessAlert(
+        'Deposit Approved & Credited',
+        res.message || `₹${deposit.amount.toLocaleString('en-IN')} has been added to ${deposit.traderName}'s live wallet balance.`
+      );
     } catch (err) {
-      console.warn('Backend deposit approve sync:', err.message);
+      console.error('Backend deposit approve error:', err);
+      swalToast(err.message || 'Failed to approve deposit on backend', 'error');
     }
   };
 
@@ -102,15 +107,20 @@ export default function DepositsPage({
     );
     if (!confirmed) return;
 
-    setDeposits((prev) =>
-      prev.map((d) => (d.id === deposit.id ? { ...d, status: 'Rejected' } : d))
-    );
-    swalToast(`Deposit ${deposit.id} rejected`, 'error');
-
     try {
-      await adminApi.rejectDeposit(deposit._id || deposit.id);
+      const res = await adminApi.rejectDeposit(deposit._id || deposit.id);
+
+      setDeposits((prev) =>
+        prev.map((d) =>
+          (d._id && deposit._id && d._id === deposit._id) || d.id === deposit.id
+            ? { ...d, status: 'Rejected', ...(res.deposit || {}) }
+            : d
+        )
+      );
+      swalToast(`Deposit ${deposit.id} marked as Rejected`, 'error');
     } catch (err) {
-      console.warn('Backend deposit reject sync:', err.message);
+      console.error('Backend deposit reject error:', err);
+      swalToast(err.message || 'Failed to reject deposit on backend', 'error');
     }
   };
 
@@ -289,13 +299,21 @@ export default function DepositsPage({
                     </span>
                   </td>
                   <td>
-                    {d.status === 'Verified' || d.isRealPaymentVerified || d.status === 'Under Review' ? (
+                    {d.status === 'Approved' || d.status === 'Success' ? (
+                      <div style={{ textAlign: 'center', fontSize: '11px', color: '#10b981', fontWeight: 700 }}>
+                        ✓ Settled (Approved)
+                      </div>
+                    ) : d.status === 'Rejected' || d.status === 'Failed' ? (
+                      <div style={{ textAlign: 'center', fontSize: '11px', color: '#ef4444', fontWeight: 600 }}>
+                        ✕ Settled (Rejected)
+                      </div>
+                    ) : (
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                         <button
                           onClick={() => handleApproveDeposit(d)}
                           className="square-btn-success"
                           style={{ padding: '4px 10px', fontSize: '11px', fontWeight: 800 }}
-                          title="Real payment confirmed! Click to credit trader wallet."
+                          title="Verify payment and credit trader wallet."
                         >
                           ✓ Approve & Credit
                         </button>
@@ -306,14 +324,6 @@ export default function DepositsPage({
                         >
                           ✕ Reject
                         </button>
-                      </div>
-                    ) : d.status === 'Pending' ? (
-                      <div style={{ textAlign: 'center', fontSize: '10.5px', color: '#f59e0b', fontWeight: 600 }}>
-                        ⏳ Awaiting Bank Credit
-                      </div>
-                    ) : (
-                      <div style={{ textAlign: 'center', fontSize: '11px', color: '#64748b' }}>
-                        Settled ({d.status})
                       </div>
                     )}
                   </td>
@@ -393,22 +403,45 @@ export default function DepositsPage({
             <div
               style={{
                 background: '#0d111a',
-                border: '1px dashed #232d3f',
-                height: '140px',
+                border: '1px solid #232d3f',
+                borderRadius: '8px',
+                minHeight: '160px',
+                maxHeight: '360px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: '18px',
-                color: '#8b9bb4',
-                fontSize: '12px',
+                overflow: 'hidden',
+                position: 'relative',
               }}
             >
-              <div style={{ fontSize: '24px', marginBottom: '6px' }}>📄</div>
-              <div>Bank Transfer Reference Slip Verified</div>
-              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                Ref: {viewProofModal.utr}
-              </div>
+              {viewProofModal.screenshotProof && (viewProofModal.screenshotProof.startsWith('data:image') || viewProofModal.screenshotProof.startsWith('http')) ? (
+                <div style={{ width: '100%', textAlign: 'center', padding: '10px' }}>
+                  <img
+                    src={viewProofModal.screenshotProof}
+                    alt="Payment Slip Proof"
+                    style={{
+                      maxHeight: '300px',
+                      maxWidth: '100%',
+                      objectFit: 'contain',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
+                    }}
+                  />
+                  <div style={{ marginTop: '6px', fontSize: '11px', color: '#10b981', fontWeight: 700 }}>
+                    ✅ Uploaded Payment Screenshot / UPI Transfer Receipt
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#8b9bb4', fontSize: '12px' }}>
+                  <div style={{ fontSize: '28px', marginBottom: '6px' }}>📄</div>
+                  <div style={{ fontWeight: 700, color: '#f1f5f9' }}>Bank Transfer Reference Slip Verified</div>
+                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                    Ref / UTR: {viewProofModal.utr}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -419,7 +452,7 @@ export default function DepositsPage({
               >
                 Close
               </button>
-              {viewProofModal.status === 'Pending' && (
+              {(viewProofModal.status === 'Pending' || viewProofModal.status === 'Verified' || viewProofModal.status === 'Under Review') && (
                 <button
                   onClick={() => {
                     handleApproveDeposit(viewProofModal);
