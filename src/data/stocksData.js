@@ -819,9 +819,11 @@ export const enrichStockWithPayment = (s) => {
   const defaultQr = custom?.qrCode !== undefined ? custom.qrCode : (s.qrCode || '');
   const rawRet = Number(custom?.returnPercent ?? s.returnPercent ?? 5);
   const effectiveReturn = Math.min(12, Math.max(2, rawRet > 12 ? Math.round(2 + ((rawRet - 15) / 28) * 10) : rawRet));
+  const effectiveEnabled = custom?.isEnabled !== undefined ? Boolean(custom.isEnabled) : (s.isEnabled !== false);
 
   return {
     ...s,
+    isEnabled: effectiveEnabled,
     returnPercent: effectiveReturn,
     minStake: 100,
     upiId: defaultUpi,

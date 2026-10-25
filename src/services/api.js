@@ -110,12 +110,12 @@ export const adminApi = {
       body: JSON.stringify(assetData),
     }),
   updateAsset: (id, updates) =>
-    request(`/assets/admin/${id}`, {
+    request(`/assets/admin/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     }),
   deleteAsset: (id) =>
-    request(`/assets/admin/${id}`, {
+    request(`/assets/admin/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     }),
 };

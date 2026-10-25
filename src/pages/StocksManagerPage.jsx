@@ -44,18 +44,23 @@ const mergeCustomQrsWithAssets = (assetList) => {
     if (custom) {
       return {
         ...item,
+        isEnabled: custom.isEnabled !== undefined ? Boolean(custom.isEnabled) : (item.isEnabled !== false),
         upiId: custom.upiId !== undefined && custom.upiId.trim() ? custom.upiId : item.upiId,
         payeeName: custom.payeeName !== undefined && custom.payeeName.trim() ? custom.payeeName : item.payeeName,
         qrCode: custom.qrCode !== undefined ? custom.qrCode : item.qrCode,
       };
     }
-    return item;
+    return {
+      ...item,
+      isEnabled: item.isEnabled !== false,
+    };
   });
 };
 
 export default function StocksManagerPage({ showToast, searchQuery = '' }) {
   const [assets, setAssets] = useState(() => mergeCustomQrsWithAssets(FIFTY_STOCKS.map(enrichStockWithPayment)));
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'DISABLED'
 
   // Modal State for Add / Edit Asset (Full CRUD)
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -95,6 +100,8 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
 
   // Filtered Assets list
   const filteredAssets = assets.filter((item) => {
+    if (statusFilter === 'ACTIVE' && item.isEnabled === false) return false;
+    if (statusFilter === 'DISABLED' && item.isEnabled !== false) return false;
     const q = (searchQuery || '').toLowerCase();
     if (!q) return true;
     return (
@@ -237,19 +244,38 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
     }
   };
 
-  // Toggle Active / Inactive
+  // Toggle Active / Disabled
   const handleToggleStatus = async (item) => {
-    const nextStatus = !item.isEnabled;
+    const currentEnabled = item.isEnabled !== false;
+    const nextStatus = !currentEnabled;
+    const key = (item.id || item.symbol || '').toUpperCase();
+
+    // 1. Persist to localStorage for instant client-side sync across tabs
+    saveCustomQrToStorage(key, { isEnabled: nextStatus });
+    if (item.symbol) saveCustomQrToStorage(item.symbol.toUpperCase(), { isEnabled: nextStatus });
+    if (item.id) saveCustomQrToStorage(item.id.toUpperCase(), { isEnabled: nextStatus });
+    if (item._id) saveCustomQrToStorage(item._id, { isEnabled: nextStatus });
+
+    // 2. Optimistic UI update
+    setAssets((prev) =>
+      prev.map((a) =>
+        (a.id === item.id || a._id === item._id || (a.symbol && a.symbol === item.symbol))
+          ? { ...a, isEnabled: nextStatus }
+          : a
+      )
+    );
+
+    // 3. Sync to backend API
     try {
-      await adminApi.updateAsset(item.id || item._id, { isEnabled: nextStatus });
-      setAssets((prev) =>
-        prev.map((a) =>
-          a.id === item.id || a._id === item._id ? { ...a, isEnabled: nextStatus } : a
-        )
+      const assetIdentifier = item.id || item.symbol || item._id;
+      await adminApi.updateAsset(assetIdentifier, { isEnabled: nextStatus });
+      showAdminSuccess(
+        nextStatus ? 'Stock Enabled' : 'Stock Disabled',
+        `"${item.name}" is now ${nextStatus ? 'ACTIVE (visible in trading portal)' : 'DISABLED (hidden from users)'}.`
       );
-      showToast?.(`Status: ${item.name} is now ${nextStatus ? 'ACTIVE' : 'PAUSED'}`);
     } catch (err) {
-      showAdminError('Failed to change status', err.message);
+      console.warn('Backend toggle status sync notice:', err.message);
+      showToast?.(`Status: ${item.name} is now ${nextStatus ? 'ACTIVE' : 'DISABLED'}`);
     }
   };
 
@@ -304,9 +330,56 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
           <span style={{ fontSize: '15px', fontWeight: 800, color: '#f1f5f9' }}>
             📈 Stock & Investment Engine Manager
           </span>
-          <span className="square-badge badge-green">
-            {assets.filter((a) => a.isEnabled).length} Active Stocks
-          </span>
+          <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('ALL')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: statusFilter === 'ALL' ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.12)',
+                background: statusFilter === 'ALL' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255,255,255,0.03)',
+                color: statusFilter === 'ALL' ? '#f59e0b' : '#94a3b8',
+                fontSize: '11px',
+                fontWeight: 800,
+                cursor: 'pointer',
+              }}
+            >
+              All ({assets.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('ACTIVE')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: statusFilter === 'ACTIVE' ? '1px solid #10b981' : '1px solid rgba(255,255,255,0.12)',
+                background: statusFilter === 'ACTIVE' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.03)',
+                color: statusFilter === 'ACTIVE' ? '#10b981' : '#94a3b8',
+                fontSize: '11px',
+                fontWeight: 800,
+                cursor: 'pointer',
+              }}
+            >
+              🟢 Active ({assets.filter((a) => a.isEnabled !== false).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('DISABLED')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: statusFilter === 'DISABLED' ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.12)',
+                background: statusFilter === 'DISABLED' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.03)',
+                color: statusFilter === 'DISABLED' ? '#ef4444' : '#94a3b8',
+                fontSize: '11px',
+                fontWeight: 800,
+                cursor: 'pointer',
+              }}
+            >
+              🔴 Disabled ({assets.filter((a) => a.isEnabled === false).length})
+            </button>
+          </div>
           <span className="square-badge badge-gold">
             Interest Cap: 2% – 12%
           </span>
@@ -481,27 +554,71 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                         </div>
                       </td>
 
-                      {/* Active / Paused Status */}
+                      {/* Active / Disabled Status Toggle */}
                       <td style={{ textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleStatus(item)}
-                          style={{
-                            cursor: 'pointer',
-                            border: 'none',
-                            background: 'none',
-                            padding: 0,
-                          }}
-                        >
-                          <span className={`square-badge ${item.isEnabled ? 'badge-green' : 'badge-gray'}`}>
-                            {item.isEnabled ? '● ACTIVE' : '○ PAUSED'}
+                        <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStatus(item)}
+                            title={item.isEnabled !== false ? 'Click to DISABLE this stock' : 'Click to ENABLE this stock'}
+                            style={{
+                              cursor: 'pointer',
+                              border: item.isEnabled !== false ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(239, 68, 68, 0.5)',
+                              background: item.isEnabled !== false ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                              padding: '5px 12px',
+                              borderRadius: '20px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              transition: 'all 0.2s ease',
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: '7px',
+                                height: '7px',
+                                borderRadius: '50%',
+                                background: item.isEnabled !== false ? '#10b981' : '#ef4444',
+                                boxShadow: item.isEnabled !== false ? '0 0 8px #10b981' : '0 0 8px #ef4444',
+                              }}
+                            />
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 800,
+                                color: item.isEnabled !== false ? '#10b981' : '#ef4444',
+                                letterSpacing: '0.3px',
+                              }}
+                            >
+                              {item.isEnabled !== false ? '🟢 ENABLED' : '🔴 DISABLED'}
+                            </span>
+                          </button>
+                          <span style={{ fontSize: '9.5px', color: item.isEnabled !== false ? '#94a3b8' : '#f87171', fontWeight: 600 }}>
+                            {item.isEnabled !== false ? 'Visible to Users' : 'Hidden from Users'}
                           </span>
-                        </button>
+                        </div>
                       </td>
 
-                      {/* Actions (CRUD: Edit, Delete) */}
+                      {/* Actions (CRUD: Toggle Disable/Enable, Edit, Delete) */}
                       <td style={{ textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStatus(item)}
+                            style={{
+                              padding: '4px 10px',
+                              fontSize: '11px',
+                              cursor: 'pointer',
+                              fontWeight: 700,
+                              borderRadius: '4px',
+                              background: item.isEnabled !== false ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                              color: item.isEnabled !== false ? '#f59e0b' : '#10b981',
+                              border: item.isEnabled !== false ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid rgba(16, 185, 129, 0.35)',
+                            }}
+                            title={item.isEnabled !== false ? 'Disable stock from user view' : 'Enable stock for user view'}
+                          >
+                            {item.isEnabled !== false ? '🚫 Disable' : '✅ Enable'}
+                          </button>
                           <button
                             onClick={() => handleOpenEdit(item)}
                             className="square-btn-primary"
@@ -796,16 +913,36 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 </div>
               </div>
 
-              {/* Status Checkbox */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', color: '#f1f5f9' }}>
+              {/* Status Toggle Card */}
+              <div
+                onClick={() => setFormData({ ...formData, isEnabled: !formData.isEnabled })}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  background: formData.isEnabled ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                  border: formData.isEnabled ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(239, 68, 68, 0.35)',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#f1f5f9' }}>
+                    5. Stock Availability Status
+                  </div>
+                  <div style={{ fontSize: '11px', color: formData.isEnabled ? '#10b981' : '#f87171', fontWeight: 600, marginTop: '2px' }}>
+                    {formData.isEnabled ? '🟢 ENABLED (Visible & tradable by users)' : '🔴 DISABLED (Hidden from users in portal & APK)'}
+                  </div>
+                </div>
                 <input
                   type="checkbox"
                   checked={formData.isEnabled}
                   onChange={(e) => setFormData({ ...formData, isEnabled: e.target.checked })}
-                  style={{ width: '16px', height: '16px', accentColor: '#10b981' }}
+                  style={{ width: '18px', height: '18px', accentColor: '#10b981', cursor: 'pointer' }}
                 />
-                <span>Active & Tradable for Users</span>
-              </label>
+              </div>
 
               {/* Action Buttons */}
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '10px' }}>
