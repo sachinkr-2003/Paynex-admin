@@ -119,13 +119,11 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify(assetData),
     }),
-  toggleAssetStatus: (id, isEnabled, symbol, _id) => {
-    const targetIdentifier = _id || (symbol && !symbol.includes('/') ? symbol : null) || (id && !id.includes('/') ? id : null) || _id || id;
-    return request(`/assets/admin/${encodeURIComponent(targetIdentifier)}`, {
+  toggleAssetStatus: (id, isEnabled, symbol, _id) =>
+    request('/assets/admin/toggle-status', {
       method: 'PUT',
       body: JSON.stringify({ isEnabled, id, symbol, _id }),
-    });
-  },
+    }),
   updateAsset: (id, updates) => {
     const targetIdentifier = updates?._id || (updates?.symbol && !updates.symbol.includes('/') ? updates.symbol : null) || (id && !id.includes('/') ? id : null) || id;
     return request(`/assets/admin/${encodeURIComponent(targetIdentifier)}`, {
