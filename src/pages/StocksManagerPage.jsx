@@ -209,7 +209,11 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
         saveCustomQrToStorage(key, payload);
         if (editingAsset._id) saveCustomQrToStorage(editingAsset._id, payload);
 
-        await adminApi.updateAsset(editingAsset.id || editingAsset._id, payload);
+        await adminApi.updateAsset(editingAsset._id || editingAsset.symbol || editingAsset.id, {
+          ...payload,
+          _id: editingAsset._id,
+          symbol: editingAsset.symbol,
+        });
 
         setAssets((prev) =>
           prev.map((a) =>
