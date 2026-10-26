@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { LayoutDashboard, TrendingUp, CreditCard, ArrowDownToLine, Users, MessageSquare, Settings, LogOut, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function Sidebar({
   activeTab,
@@ -16,47 +17,47 @@ export default function Sidebar({
     {
       id: 'dashboard',
       label: 'Dashboard',
-      icon: '📊',
+      icon: <LayoutDashboard size={18} />,
       badge: null,
     },
     {
       id: 'stocks_manager',
       label: 'Stocks & Return %',
-      icon: '📈',
+      icon: <TrendingUp size={18} />,
       badge: '50+ STOCKS',
       badgeColor: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30',
     },
     {
       id: 'deposits',
       label: 'Deposit Approvals',
-      icon: '💳',
+      icon: <CreditCard size={18} />,
       badge: pendingDepositsCount > 0 ? `${pendingDepositsCount}` : null,
       badgeColor: 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30',
     },
     {
       id: 'withdrawals',
       label: 'Withdrawal Payouts',
-      icon: '🏧',
+      icon: <ArrowDownToLine size={18} />,
       badge: pendingWithdrawalsCount > 0 ? `${pendingWithdrawalsCount}` : null,
       badgeColor: 'bg-red-500/15 text-red-400 border border-red-500/30',
     },
     {
       id: 'users',
       label: 'Traders & Users',
-      icon: '👥',
+      icon: <Users size={18} />,
       badge: null,
     },
     {
       id: 'support_chat',
       label: 'AI Support Chat',
-      icon: '💬',
+      icon: <MessageSquare size={18} />,
       badge: 'LIVE AI',
       badgeColor: 'bg-amber-500/15 text-amber-400 border border-amber-500/30',
     },
     {
       id: 'settings',
       label: 'Payment & UPI Settings',
-      icon: '⚙️',
+      icon: <Settings size={18} />,
       badge: null,
     },
   ];
@@ -134,22 +135,22 @@ export default function Sidebar({
               )}
             </div>
 
-            {/* Mobile Close Button (✕) */}
+            {/* Mobile Close Button */}
             <button
               onClick={() => setIsMobileOpen(false)}
-              className="lg:hidden text-slate-400 hover:text-white text-lg p-1"
+              className="lg:hidden text-slate-400 hover:text-white p-1"
             >
-              ✕
+              <X size={18} />
             </button>
 
             {/* Desktop Collapse Toggle */}
             {!isCollapsed && (
               <button
                 onClick={() => setIsCollapsed(true)}
-                className="hidden lg:block border border-[#1e2638] rounded-none text-slate-400 hover:text-white text-xs px-1.5 py-0.5"
+                className="hidden lg:flex items-center justify-center border border-[#1e2638] rounded-none text-slate-400 hover:text-white text-xs px-1.5 py-0.5"
                 title="Collapse Sidebar"
               >
-                ◀
+                <ChevronLeft size={14} />
               </button>
             )}
           </div>
@@ -161,9 +162,9 @@ export default function Sidebar({
             <button
               onClick={() => setIsCollapsed(false)}
               title="Expand Sidebar"
-              className="border border-[#1e2638] rounded-none text-amber-500 text-xs p-1.5 mb-2 hover:bg-[#151c28] text-center"
+              className="border border-[#1e2638] rounded-none text-amber-500 text-xs p-1.5 mb-2 hover:bg-[#151c28] flex items-center justify-center"
             >
-              ▶
+              <ChevronRight size={14} />
             </button>
           )}
 
@@ -215,7 +216,7 @@ export default function Sidebar({
               style={{ borderRadius: '0px' }}
             >
               <div className="flex items-center gap-2">
-                <span>🚪</span>
+                <LogOut size={16} />
                 {!isCollapsed && <span>Sign Out</span>}
               </div>
               {!isCollapsed && <span className="text-[10px] text-slate-500 font-mono">EXIT</span>}

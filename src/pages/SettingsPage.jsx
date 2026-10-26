@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { exportToExcel } from '../utils/exportToExcel';
 import adminApi from '../services/api';
 import { showAdminSuccess, showAdminError } from '../utils/swal';
+import { AlertTriangle } from 'lucide-react';
 
 export default function SettingsPage({ settings, setSettings, showToast }) {
   const [formData, setFormData] = useState({ ...settings });
@@ -29,10 +30,10 @@ export default function SettingsPage({ settings, setSettings, showToast }) {
   const handlePasswordUpdate = (e) => {
     e.preventDefault();
     if (!adminPass.newPass || adminPass.newPass !== adminPass.confirm) {
-      showToast('❌ Passwords do not match');
+      showToast('Passwords do not match');
       return;
     }
-    showToast('🔒 Admin security key updated');
+    showToast('Admin security key updated');
     setAdminPass({ current: '', newPass: '', confirm: '' });
   };
 
@@ -59,7 +60,7 @@ export default function SettingsPage({ settings, setSettings, showToast }) {
       { key: 'Auto-Release IMPS', val: formData.autoReleaseWithdrawals ? 'ENABLED' : 'MANUAL', category: 'Security' },
     ];
     exportToExcel('PAYNEX_System_Settings_Audit', headers, rows);
-    showToast('📊 Settings configuration exported to Excel');
+    showToast('Settings configuration exported to Excel');
   };
 
   return (
@@ -108,8 +109,8 @@ export default function SettingsPage({ settings, setSettings, showToast }) {
             background: 'rgba(239, 68, 68, 0.08)',
           }}
         >
-          <div style={{ fontSize: '13px', color: '#ef4444', fontWeight: 600 }}>
-            🚨 Emergency Platform Freeze Active — user operations are suspended.
+          <div style={{ fontSize: '13px', color: '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <AlertTriangle size={15} color="#ef4444" /> Emergency Platform Freeze Active — user operations are suspended.
           </div>
           <button
             onClick={() => {
@@ -287,7 +288,7 @@ export default function SettingsPage({ settings, setSettings, showToast }) {
               onClick={() => {
                 const nextVal = !formData.emergencyFreeze;
                 handleChange('emergencyFreeze', nextVal);
-                showToast(nextVal ? '🚨 Emergency Freeze Engaged' : 'Operations resumed');
+                showToast(nextVal ? 'Emergency Freeze Engaged' : 'Operations resumed');
               }}
               className={formData.emergencyFreeze ? 'square-btn-danger' : 'square-btn-secondary'}
               style={{ padding: '4px 10px', fontSize: '11px' }}

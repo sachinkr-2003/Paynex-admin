@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { exportToExcel } from '../utils/exportToExcel';
 import adminApi from '../services/api';
 import { showConfirmDialog, showSuccessAlert, showErrorAlert, showToast as swalToast, PaynexSwal } from '../utils/swal';
+import { Key, X } from 'lucide-react';
 
 export default function UsersPage({ traders, setTraders, showToast, searchQuery = '' }) {
   const [kycFilter, setKycFilter] = useState('All');
@@ -305,10 +306,10 @@ export default function UsersPage({ traders, setTraders, showToast, searchQuery 
                       <button
                         onClick={() => handleDirectResetPassword(u)}
                         className="square-btn-secondary"
-                        style={{ padding: '4px 8px', fontSize: '11px', color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.4)' }}
+                        style={{ padding: '4px 8px', fontSize: '11px', color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.4)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                         title="Directly Reset User Password"
                       >
-                        🔑 Reset
+                        <Key size={11} /> Reset
                       </button>
                       <button
                         onClick={() => handleToggleBan(u.uid)}
@@ -359,9 +360,9 @@ export default function UsersPage({ traders, setTraders, showToast, searchQuery 
               </div>
               <button
                 onClick={() => setBalanceModalUser(null)}
-                style={{ background: 'none', border: 'none', color: '#8b9bb4', cursor: 'pointer', fontSize: '14px' }}
+                style={{ background: 'none', border: 'none', color: '#8b9bb4', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
               >
-                ✕
+                <X size={15} />
               </button>
             </div>
 

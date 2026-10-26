@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { exportToExcel } from '../utils/exportToExcel';
 import adminApi from '../services/api';
 import { showConfirmDialog, showSuccessAlert, showToast as swalToast } from '../utils/swal';
+import { Bell, CreditCard, Building2, Check, X, FileText, CheckCircle2 } from 'lucide-react';
 
 export default function DepositsPage({
   deposits,
@@ -144,7 +145,7 @@ export default function DepositsPage({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '20px' }}>🔔</span>
+            <Bell size={20} color="#f59e0b" />
             <div>
               <div style={{ fontSize: '13px', fontWeight: 800, color: '#f59e0b' }}>
                 {underReviewCount} UTR Submission(s) Awaiting Review
@@ -185,7 +186,7 @@ export default function DepositsPage({
           </span>
           {underReviewCount > 0 && (
             <span className="square-badge badge-gold" style={{ animation: 'pulse 2s infinite' }}>
-              🟡 {underReviewCount} Under Review
+              {underReviewCount} Under Review
             </span>
           )}
         </div>
@@ -198,7 +199,7 @@ export default function DepositsPage({
             style={{ height: '32px', fontSize: '12px', padding: '4px 10px' }}
           >
             <option value="All">All Transactions</option>
-            <option value="Under Review">🟡 Under Review Only ({underReviewCount})</option>
+            <option value="Under Review">Under Review Only ({underReviewCount})</option>
             <option value="Pending">Pending Only</option>
             <option value="Approved">Approved Only</option>
             <option value="Rejected">Rejected Only</option>
@@ -231,7 +232,7 @@ export default function DepositsPage({
               {filteredDeposits.length === 0 ? (
                 <tr>
                   <td colSpan="8" style={{ padding: '36px 14px', textAlign: 'center', color: '#8b9bb4', fontSize: '13px' }}>
-                    💳 No deposits recorded yet. New incoming user deposits will appear here live!
+                    No deposits recorded yet. New incoming user deposits will appear here live!
                   </td>
                 </tr>
               ) : (
@@ -250,8 +251,8 @@ export default function DepositsPage({
                   <td>
                     <span className="square-badge badge-gray">{d.method}</span>
                     {d.companyName && (
-                      <div style={{ fontSize: '10.5px', color: '#f59e0b', fontWeight: 700, marginTop: '2px' }}>
-                        🏢 {d.companyName}
+                      <div style={{ fontSize: '10.5px', color: '#f59e0b', fontWeight: 700, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <Building2 size={11} /> {d.companyName}
                       </div>
                     )}
                   </td>
@@ -292,37 +293,37 @@ export default function DepositsPage({
                       }
                     >
                       {d.status === 'Verified' || d.isRealPaymentVerified
-                        ? '🟢 Real Payment Verified'
+                        ? 'Real Payment Verified'
                         : d.status === 'Under Review'
-                        ? '🟡 Under Review'
+                        ? 'Under Review'
                         : d.status}
                     </span>
                   </td>
                   <td>
                     {d.status === 'Approved' || d.status === 'Success' ? (
-                      <div style={{ textAlign: 'center', fontSize: '11px', color: '#10b981', fontWeight: 700 }}>
-                        ✓ Settled (Approved)
+                      <div style={{ textAlign: 'center', fontSize: '11px', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                        <Check size={13} strokeWidth={3} /> Settled (Approved)
                       </div>
                     ) : d.status === 'Rejected' || d.status === 'Failed' ? (
-                      <div style={{ textAlign: 'center', fontSize: '11px', color: '#ef4444', fontWeight: 600 }}>
-                        ✕ Settled (Rejected)
+                      <div style={{ textAlign: 'center', fontSize: '11px', color: '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                        <X size={13} /> Settled (Rejected)
                       </div>
                     ) : (
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                         <button
                           onClick={() => handleApproveDeposit(d)}
-                          className="square-btn-success"
+                          className="square-btn-success flex items-center gap-1"
                           style={{ padding: '4px 10px', fontSize: '11px', fontWeight: 800 }}
                           title="Verify payment and credit trader wallet."
                         >
-                          ✓ Approve & Credit
+                          <Check size={12} strokeWidth={3} /> Approve & Credit
                         </button>
                         <button
                           onClick={() => handleRejectDeposit(d)}
-                          className="square-btn-danger"
+                          className="square-btn-danger flex items-center gap-1"
                           style={{ padding: '4px 8px', fontSize: '11px' }}
                         >
-                          ✕ Reject
+                          <X size={12} /> Reject
                         </button>
                       </div>
                     )}
@@ -367,9 +368,9 @@ export default function DepositsPage({
               </div>
               <button
                 onClick={() => setViewProofModal(null)}
-                style={{ background: 'none', border: 'none', color: '#8b9bb4', cursor: 'pointer', fontSize: '14px' }}
+                style={{ background: 'none', border: 'none', color: '#8b9bb4', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
               >
-                ✕
+                <X size={16} />
               </button>
             </div>
 
@@ -429,13 +430,15 @@ export default function DepositsPage({
                       boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
                     }}
                   />
-                  <div style={{ marginTop: '6px', fontSize: '11px', color: '#10b981', fontWeight: 700 }}>
-                    ✅ Uploaded Payment Screenshot / UPI Transfer Receipt
+                  <div style={{ marginTop: '6px', fontSize: '11px', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                    <CheckCircle2 size={13} /> Uploaded Payment Screenshot / UPI Transfer Receipt
                   </div>
                 </div>
               ) : (
                 <div style={{ padding: '20px', textAlign: 'center', color: '#8b9bb4', fontSize: '12px' }}>
-                  <div style={{ fontSize: '28px', marginBottom: '6px' }}>📄</div>
+                  <div style={{ marginBottom: '6px', display: 'flex', justifyContent: 'center' }}>
+                    <FileText size={32} color="#8b9bb4" />
+                  </div>
                   <div style={{ fontWeight: 700, color: '#f1f5f9' }}>Bank Transfer Reference Slip Verified</div>
                   <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
                     Ref / UTR: {viewProofModal.utr}

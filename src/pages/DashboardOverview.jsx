@@ -1,5 +1,16 @@
 import { useState } from 'react';
 import { exportToExcel } from '../utils/exportToExcel';
+import {
+  TrendingUp,
+  CreditCard,
+  ArrowDownToLine,
+  Landmark,
+  CircleDollarSign,
+  ArrowUpRight,
+  Building2,
+  Users,
+  Bell,
+} from 'lucide-react';
 
 export default function DashboardOverview({
   kpis = {},
@@ -102,7 +113,7 @@ export default function DashboardOverview({
       { label: 'Timestamp', accessor: 'time' },
     ];
     exportToExcel('PAYNEX_Live_Trading_Rounds', headers, gameRounds);
-    showToast('📊 Trading rounds log exported to Excel (.csv)');
+    showToast('Trading rounds log exported to Excel (.csv)');
   };
 
   return (
@@ -131,24 +142,24 @@ export default function DashboardOverview({
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button
             onClick={() => setActiveTab('stocks_manager')}
-            className="square-btn-primary"
+            className="square-btn-primary flex items-center gap-1.5"
             style={{ height: '32px', fontSize: '11.5px', padding: '0 12px' }}
           >
-            📈 Stocks & Return % (50+)
+            <TrendingUp size={13} /> Stocks & Return % (50+)
           </button>
           <button
             onClick={() => setActiveTab('deposits')}
-            className="square-btn-secondary"
+            className="square-btn-secondary flex items-center gap-1.5"
             style={{ height: '32px', fontSize: '11.5px', padding: '0 12px' }}
           >
-            💳 Deposits ({pendingDeposits.length})
+            <CreditCard size={13} /> Deposits ({pendingDeposits.length})
           </button>
           <button
             onClick={() => setActiveTab('withdrawals')}
-            className="square-btn-secondary"
+            className="square-btn-secondary flex items-center gap-1.5"
             style={{ height: '32px', fontSize: '11.5px', padding: '0 12px' }}
           >
-            🏧 Withdrawals ({pendingWithdrawals.length})
+            <ArrowDownToLine size={13} /> Withdrawals ({pendingWithdrawals.length})
           </button>
         </div>
       </div>
@@ -164,8 +175,8 @@ export default function DashboardOverview({
             padding: '0 2px',
           }}
         >
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#f59e0b', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-            🏛️ Platform Treasury & Financial Ledger (Inflow vs Outflow)
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#f59e0b', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Landmark size={14} /> Platform Treasury & Financial Ledger (Inflow vs Outflow)
           </div>
           <div style={{ fontSize: '11px', color: '#8b9bb4' }}>
             Updated in Real-Time
@@ -193,7 +204,7 @@ export default function DashboardOverview({
               <span className="square-badge badge-green" style={{ fontSize: '9px', fontWeight: 700, padding: '1.5px 6px' }}>
                 ● TOTAL USER INVESTED (INFLOW)
               </span>
-              <span style={{ fontSize: '14px' }}>💰</span>
+              <CircleDollarSign size={16} color="#10b981" />
             </div>
 
             <div
@@ -244,7 +255,7 @@ export default function DashboardOverview({
               <span className="square-badge badge-red" style={{ fontSize: '9px', fontWeight: 700, padding: '1.5px 6px' }}>
                 ● TOTAL MONEY PAID OUT (MINUS)
               </span>
-              <span style={{ fontSize: '14px' }}>📤</span>
+              <ArrowUpRight size={16} color="#ef4444" />
             </div>
 
             <div
@@ -297,7 +308,7 @@ export default function DashboardOverview({
               <span className="square-badge badge-gold" style={{ fontSize: '9px', fontWeight: 700, padding: '1.5px 6px' }}>
                 ● OVERALL NET PLATFORM PROFIT
               </span>
-              <span style={{ fontSize: '14px' }}>🏦</span>
+              <Building2 size={16} color="#f59e0b" />
             </div>
 
             <div
@@ -330,7 +341,7 @@ export default function DashboardOverview({
               }}
             >
               <span>Profit Margin: <strong style={{ color: isProfit ? '#10b981' : '#ef4444' }}>{totalUserInvested > 0 ? `+${profitMargin}%` : '0%'}</strong></span>
-              <span>Status: <strong style={{ color: isProfit ? '#10b981' : '#f59e0b' }}>{totalUserInvested === 0 && totalPaidOut === 0 ? 'Balanced ⚖️' : isProfit ? 'Net Surplus ✅' : 'Deficit ⚠️'}</strong></span>
+              <span>Status: <strong style={{ color: isProfit ? '#10b981' : '#f59e0b' }}>{totalUserInvested === 0 && totalPaidOut === 0 ? 'Balanced' : isProfit ? 'Net Surplus' : 'Deficit'}</strong></span>
             </div>
           </div>
         </div>
@@ -413,7 +424,7 @@ export default function DashboardOverview({
             <span style={{ fontSize: '10px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Pending Deposits
             </span>
-            <span style={{ fontSize: '13px' }}>💳</span>
+            <CreditCard size={15} color="#f59e0b" />
           </div>
           <div style={{ fontSize: '19px', fontWeight: 800, color: '#f59e0b', fontFamily: 'monospace', marginTop: '4px' }}>
             {pendingDeposits.length}{' '}
@@ -422,7 +433,7 @@ export default function DashboardOverview({
             </span>
           </div>
           <div style={{ fontSize: '10.5px', color: pendingDeposits.length > 0 ? '#fbbf24' : '#10b981', marginTop: '3px', fontWeight: 600 }}>
-            {pendingDeposits.length > 0 ? '⚠️ Action Required: Verify UTR & Credit' : '✅ All deposits verified'}
+            {pendingDeposits.length > 0 ? 'Action Required: Verify UTR & Credit' : 'All deposits verified'}
           </div>
         </div>
 
@@ -441,7 +452,7 @@ export default function DashboardOverview({
             <span style={{ fontSize: '10px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Pending Payouts
             </span>
-            <span style={{ fontSize: '13px' }}>🏧</span>
+            <ArrowDownToLine size={15} color="#ef4444" />
           </div>
           <div style={{ fontSize: '19px', fontWeight: 800, color: '#ef4444', fontFamily: 'monospace', marginTop: '4px' }}>
             {pendingWithdrawals.length}{' '}
@@ -450,7 +461,7 @@ export default function DashboardOverview({
             </span>
           </div>
           <div style={{ fontSize: '10.5px', color: pendingWithdrawals.length > 0 ? '#f87171' : '#10b981', marginTop: '3px', fontWeight: 600 }}>
-            {pendingWithdrawals.length > 0 ? '⚠️ IMPS Payouts Waiting Approval' : '✅ Zero pending payouts'}
+            {pendingWithdrawals.length > 0 ? 'IMPS Payouts Waiting Approval' : 'Zero pending payouts'}
           </div>
         </div>
 
@@ -469,7 +480,7 @@ export default function DashboardOverview({
             <span style={{ fontSize: '10px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Active Stocks Catalog
             </span>
-            <span style={{ fontSize: '13px' }}>📈</span>
+            <TrendingUp size={15} color="#10b981" />
           </div>
           <div style={{ fontSize: '19px', fontWeight: 800, color: '#10b981', fontFamily: 'monospace', marginTop: '4px' }}>
             59 Assets
@@ -494,7 +505,7 @@ export default function DashboardOverview({
             <span style={{ fontSize: '10px', color: '#8b9bb4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Total Traders
             </span>
-            <span style={{ fontSize: '13px' }}>👥</span>
+            <Users size={15} color="#0284c7" />
           </div>
           <div style={{ fontSize: '19px', fontWeight: 800, color: '#f1f5f9', fontFamily: 'monospace', marginTop: '4px' }}>
             {traders.length || kpis?.totalTraders || 1}{' '}
@@ -524,7 +535,7 @@ export default function DashboardOverview({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '18px' }}>🔔</span>
+            <Bell size={18} color="#f59e0b" />
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>
                 Pending Actions Require Admin Approval

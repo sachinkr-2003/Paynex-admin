@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Menu, Search, X, FileSpreadsheet, LogOut } from 'lucide-react';
 
 export default function Header({
   activeTab,
@@ -53,7 +54,7 @@ export default function Header({
           title="Open Menu"
           aria-label="Open Navigation Drawer"
         >
-          ☰
+          <Menu size={16} />
         </button>
 
         {/* Clean Breadcrumb */}
@@ -81,7 +82,8 @@ export default function Header({
         </div>
 
         {/* Global Search */}
-        <div className="relative w-20 xs:w-28 sm:w-40 md:w-48">
+        <div className="relative w-20 xs:w-28 sm:w-40 md:w-48 flex items-center">
+          <Search size={12} className="absolute left-1.5 sm:left-2 text-slate-500 pointer-events-none" />
           <input
             type="text"
             placeholder="Search..."
@@ -89,13 +91,12 @@ export default function Header({
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-8 text-xs pl-6 sm:pl-7 pr-5 sm:pr-6 bg-[#0d111a] border border-[#1e2638] text-white rounded-none outline-none focus:border-amber-500 transition-colors placeholder:text-slate-500"
           />
-          <span className="absolute left-1.5 sm:left-2 top-1/2 -translate-y-1/2 text-xs text-slate-500 pointer-events-none">🔍</span>
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-1 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white p-0.5"
+              className="absolute right-1 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white p-0.5 flex items-center"
             >
-              ✕
+              <X size={12} />
             </button>
           )}
         </div>
@@ -106,7 +107,7 @@ export default function Header({
           className="h-8 px-2 sm:px-3 bg-[#0f6c38] hover:bg-[#137d42] text-white text-xs font-semibold border border-[#148043] rounded-none flex items-center gap-1.5 transition-colors shrink-0"
           title="Export complete system audit ledger to CSV / Microsoft Excel"
         >
-          <span>📊</span>
+          <FileSpreadsheet size={13} />
           <span className="hidden sm:inline">Export Excel</span>
         </button>
 
@@ -129,7 +130,7 @@ export default function Header({
             style={{ borderRadius: '0px' }}
             title="Sign Out of Master Admin Console"
           >
-            <span>🚪</span>
+            <LogOut size={13} />
             <span className="hidden md:inline">Sign Out</span>
           </button>
         )}

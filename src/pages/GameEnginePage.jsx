@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { exportToExcel } from '../utils/exportToExcel';
 import adminApi from '../services/api';
 import { showAdminSuccess, showAdminWarning, showAdminError } from '../utils/swal';
+import { Clock, Zap, Loader2, TrendingUp } from 'lucide-react';
 
 export default function GameEnginePage({
   kpis,
@@ -59,7 +60,7 @@ export default function GameEnginePage({
           '5:00 AM Interest Distributed!',
           res.message || `Processed ${res.processedCount} active investments. Total ₹${res.totalDistributed} credited.`
         );
-        showToast(`⚡ Interest Credited: ₹${res.totalDistributed} across ${res.processedCount} contracts`);
+        showToast(`Interest Credited: ₹${res.totalDistributed} across ${res.processedCount} contracts`);
       } else {
         showAdminWarning('Notice', res?.message || 'Could not process interest distribution.');
       }
@@ -84,14 +85,14 @@ export default function GameEnginePage({
       { label: 'Timestamp', accessor: 'time' },
     ];
     exportToExcel('PAYNEX_Staking_Engine_Log', headers, filteredRounds);
-    showToast('📊 Staking Engine log exported to Excel');
+    showToast('Staking Engine log exported to Excel');
   };
 
   const activeRoundsCount = gameRounds.filter((r) => r.status === 'Active').length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* ⏰ Automated 5:00 AM Stock Daily Interest Engine Banner */}
+      {/* Automated 5:00 AM Stock Daily Interest Engine Banner */}
       <div
         className="square-card"
         style={{
@@ -116,10 +117,9 @@ export default function GameEnginePage({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '24px',
             }}
           >
-            ⏰
+            <Clock size={22} color="#fbbf24" />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -127,7 +127,7 @@ export default function GameEnginePage({
                 Automated 05:00 AM Stock Interest Engine
               </span>
               <span className="square-badge badge-green" style={{ fontSize: '10px', padding: '2px 8px' }}>
-                ACTIVE (Asia/Kolkata) ✅
+                ACTIVE (Asia/Kolkata)
               </span>
             </div>
             <div style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '3px', lineHeight: 1.4 }}>
@@ -155,7 +155,17 @@ export default function GameEnginePage({
             transition: 'all 0.2s ease',
           }}
         >
-          {isDistributing ? '⏳ Processing...' : '⚡ Trigger 5:00 AM Interest (Manual Test)'}
+          {isDistributing ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              <span>Processing...</span>
+            </>
+          ) : (
+            <>
+              <Zap size={14} />
+              <span>Trigger 5:00 AM Interest (Manual Test)</span>
+            </>
+          )}
         </button>
       </div>
 
@@ -203,7 +213,7 @@ export default function GameEnginePage({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '18px' }}>📈</span>
+          <TrendingUp size={18} color="#10b981" />
           <div>
             <div style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>
               Want to set different Profit / Return % for individual Stocks?

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import adminApi from '../services/api';
 import { showSuccessAlert, showErrorAlert, showToast as swalToast } from '../utils/swal';
+import { Bot, Crown, User, Pause, RotateCcw, Check } from 'lucide-react';
 
 export default function SupportChatPage({ showToast, searchQuery = '' }) {
   const [chats, setChats] = useState([]);
@@ -36,7 +37,7 @@ export default function SupportChatPage({ showToast, searchQuery = '' }) {
         {
           _id: 'm2',
           sender: 'ai',
-          senderName: 'PAYNEX AI Agent 🤖',
+          senderName: 'PAYNEX AI Agent',
           text: 'Namaste Rahul Sharma! Withdrawal amount aamtaur par 15 se 30 minute ke andar direct aapke bank account me IMPS ke dwara bhej diya jata hai. Maine aapki request check kar li hai, process chal raha hai.',
           createdAt: new Date(Date.now() - 1000 * 60 * 5),
         },
@@ -65,7 +66,7 @@ export default function SupportChatPage({ showToast, searchQuery = '' }) {
         {
           _id: 'm4',
           sender: 'ai',
-          senderName: 'PAYNEX AI Agent 🤖',
+          senderName: 'PAYNEX AI Agent',
           text: 'Hello Priya! The minimum deposit on PAYNEX is ₹500. Navigate to Wallet > Deposit, scan the official UPI QR code, and enter your 12-digit UTR ref number. Balance will reflect in 2-15 minutes.',
           createdAt: new Date(Date.now() - 1000 * 60 * 17),
         },
@@ -94,7 +95,7 @@ export default function SupportChatPage({ showToast, searchQuery = '' }) {
         {
           _id: 'm6',
           sender: 'ai',
-          senderName: 'PAYNEX AI Agent 🤖',
+          senderName: 'PAYNEX AI Agent',
           text: 'To reset your password, click "Forgot Password?" under the Sign In form. Enter your registered email to receive a 6-digit OTP code, then set a new password instantly.',
           createdAt: new Date(Date.now() - 1000 * 60 * 120),
         },
@@ -162,7 +163,7 @@ export default function SupportChatPage({ showToast, searchQuery = '' }) {
     const newMsg = {
       _id: 'adm_' + Date.now(),
       sender: 'admin',
-      senderName: '👑 Super Admin',
+      senderName: 'Super Admin',
       text: cleanText,
       createdAt: new Date(),
     };
@@ -182,7 +183,7 @@ export default function SupportChatPage({ showToast, searchQuery = '' }) {
     setAdminReplyText('');
 
     try {
-      await adminApi.sendAdminChatReply(selectedChat._id, cleanText, '👑 Super Admin');
+      await adminApi.sendAdminChatReply(selectedChat._id, cleanText, 'Super Admin');
       swalToast('Reply sent to trader desk', 'success');
     } catch (err) {
       console.warn('Backend chat reply notice:', err.message);
@@ -262,7 +263,7 @@ export default function SupportChatPage({ showToast, searchQuery = '' }) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ fontSize: '20px' }}>🤖</div>
+          <Bot size={22} color="#fbbf24" />
           <div>
             <div style={{ fontSize: '14px', fontWeight: 800, color: '#f1f5f9' }}>
               AI Live Support Desk &amp; Trader Chat
@@ -387,7 +388,15 @@ export default function SupportChatPage({ showToast, searchQuery = '' }) {
                         textOverflow: 'ellipsis',
                       }}
                     >
-                      {c.lastSender === 'ai' ? '🤖 ' : c.lastSender === 'admin' ? '👑 ' : '👤 '}
+                      <span className="inline-flex items-center gap-1 mr-1">
+                        {c.lastSender === 'ai' ? (
+                          <Bot size={11} className="text-amber-400 inline" />
+                        ) : c.lastSender === 'admin' ? (
+                          <Crown size={11} className="text-emerald-400 inline" />
+                        ) : (
+                          <User size={11} className="text-blue-400 inline" />
+                        )}
+                      </span>
                       {c.lastMessage}
                     </p>
 
@@ -476,7 +485,11 @@ export default function SupportChatPage({ showToast, searchQuery = '' }) {
                     }}
                     title="Toggle Automated AI Assistant for this trader"
                   >
-                    {selectedChat.aiEnabled ? '🤖 AI Auto-Reply: ON' : '⏸️ AI Auto-Reply: OFF'}
+                    {selectedChat.aiEnabled ? (
+                      <span className="flex items-center gap-1.5"><Bot size={12} /> AI Auto-Reply: ON</span>
+                    ) : (
+                      <span className="flex items-center gap-1.5"><Pause size={12} /> AI Auto-Reply: OFF</span>
+                    )}
                   </button>
 
                   <button
@@ -489,7 +502,11 @@ export default function SupportChatPage({ showToast, searchQuery = '' }) {
                       borderColor: selectedChat.status === 'Resolved' ? '#f59e0b' : '#10b981',
                     }}
                   >
-                    {selectedChat.status === 'Resolved' ? '↻ Reopen Chat' : '✓ Mark Resolved'}
+                    {selectedChat.status === 'Resolved' ? (
+                      <span className="flex items-center gap-1.5"><RotateCcw size={12} /> Reopen Chat</span>
+                    ) : (
+                      <span className="flex items-center gap-1.5"><Check size={12} strokeWidth={3} /> Mark Resolved</span>
+                    )}
                   </button>
                 </div>
               </div>
@@ -533,7 +550,19 @@ export default function SupportChatPage({ showToast, searchQuery = '' }) {
                           gap: '4px',
                         }}
                       >
-                        {isUser ? '👤 ' + m.senderName : isAi ? '🤖 ' + m.senderName : '👑 ' + m.senderName}
+                        {isUser ? (
+                          <>
+                            <User size={11} /> {m.senderName}
+                          </>
+                        ) : isAi ? (
+                          <>
+                            <Bot size={11} /> {m.senderName}
+                          </>
+                        ) : (
+                          <>
+                            <Crown size={11} /> {m.senderName}
+                          </>
+                        )}
                         <span style={{ color: '#64748b', fontWeight: 400, marginLeft: '4px' }}>
                           {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -583,7 +612,7 @@ export default function SupportChatPage({ showToast, searchQuery = '' }) {
                   Quick Reply:
                 </span>
                 {[
-                  'Deposit verified & credited to wallet ✓',
+                  'Deposit verified & credited to wallet',
                   'Withdrawal IMPS released to your bank account',
                   'Please upload valid Aadhaar/PAN for KYC',
                   'Issue resolved. Feel free to trade!',

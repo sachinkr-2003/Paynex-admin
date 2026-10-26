@@ -9,6 +9,8 @@ import {
   showToast as swalToast,
 } from '../utils/swal';
 import { FIFTY_STOCKS, getCompanyQrUrl, enrichStockWithPayment } from '../data/stocksData';
+import AssetIcon from '../components/AssetIcon';
+import { TrendingUp, QrCode, Check, X, Edit, Trash2, Plus, Save, Ban } from 'lucide-react';
 
 const QR_STORAGE_KEY = 'paynex_custom_stock_qrs';
 
@@ -322,7 +324,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
       { label: 'Status', accessor: (a) => (a.isEnabled ? 'ACTIVE' : 'PAUSED') },
     ];
     exportToExcel('PAYNEX_Stocks_Management_Catalog', headers, filteredAssets);
-    swalToast?.('📊 Stocks catalog exported to Excel');
+    swalToast?.('Stocks catalog exported to Excel');
   };
 
   return (
@@ -340,8 +342,8 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '15px', fontWeight: 800, color: '#f1f5f9' }}>
-            📈 Stock & Investment Engine Manager
+          <span style={{ fontSize: '15px', fontWeight: 800, color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <TrendingUp size={16} /> Stock & Investment Engine Manager
           </span>
           <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
@@ -374,7 +376,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 cursor: 'pointer',
               }}
             >
-              🟢 Active ({assets.filter((a) => a.isEnabled !== false).length})
+              Active ({assets.filter((a) => a.isEnabled !== false).length})
             </button>
             <button
               type="button"
@@ -390,7 +392,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 cursor: 'pointer',
               }}
             >
-              🔴 Disabled ({assets.filter((a) => a.isEnabled === false).length})
+              Disabled ({assets.filter((a) => a.isEnabled === false).length})
             </button>
           </div>
           <span className="square-badge badge-gold">
@@ -483,7 +485,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                               flexShrink: 0,
                             }}
                           >
-                            {item.icon || '📈'}
+                            <AssetIcon symbol={item.symbol || item.id} iconName={item.icon} size={16} color="#fff" />
                           </div>
                           <div>
                             <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '13px' }}>
@@ -559,9 +561,9 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                             </div>
                             <span
                               onClick={() => setViewingQrAsset(item)}
-                              style={{ fontSize: '10.5px', color: '#f59e0b', cursor: 'pointer', fontWeight: 600 }}
+                              style={{ fontSize: '10.5px', color: '#f59e0b', cursor: 'pointer', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                             >
-                              📲 View QR Code
+                              <QrCode size={11} /> View QR Code
                             </span>
                           </div>
                         </div>
@@ -603,7 +605,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                                 letterSpacing: '0.3px',
                               }}
                             >
-                              {item.isEnabled !== false ? '🟢 ENABLED' : '🔴 DISABLED'}
+                              {item.isEnabled !== false ? 'ENABLED' : 'DISABLED'}
                             </span>
                           </button>
                           <span style={{ fontSize: '9.5px', color: item.isEnabled !== false ? '#94a3b8' : '#f87171', fontWeight: 600 }}>
@@ -627,26 +629,37 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                               background: item.isEnabled !== false ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
                               color: item.isEnabled !== false ? '#f59e0b' : '#10b981',
                               border: item.isEnabled !== false ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid rgba(16, 185, 129, 0.35)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
                             }}
                             title={item.isEnabled !== false ? 'Disable stock from user view' : 'Enable stock for user view'}
                           >
-                            {item.isEnabled !== false ? '🚫 Disable' : '✅ Enable'}
+                            {item.isEnabled !== false ? (
+                              <>
+                                <Ban size={11} /> Disable
+                              </>
+                            ) : (
+                              <>
+                                <Check size={11} strokeWidth={3} /> Enable
+                              </>
+                            )}
                           </button>
                           <button
                             onClick={() => handleOpenEdit(item)}
                             className="square-btn-primary"
-                            style={{ padding: '4px 10px', fontSize: '11px', cursor: 'pointer' }}
+                            style={{ padding: '4px 10px', fontSize: '11px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                             title="Edit Stock Name, Min Amount, Interest, or QR"
                           >
-                            ✏️ Edit
+                            <Edit size={11} /> Edit
                           </button>
                           <button
                             onClick={() => handleDeleteAsset(item)}
                             className="square-btn-danger"
-                            style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}
+                            style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                             title="Delete Stock"
                           >
-                            🗑️ Delete
+                            <Trash2 size={11} /> Delete
                           </button>
                         </div>
                       </td>
@@ -695,7 +708,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '12px' }}>
               <div>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0, color: '#f1f5f9' }}>
-                  {editingAsset ? `✏️ Edit Stock: ${editingAsset.name}` : '➕ Add New Stock'}
+                  {editingAsset ? `Edit Stock: ${editingAsset.name}` : 'Add New Stock'}
                 </h3>
                 <div style={{ fontSize: '12px', color: '#8b9bb4', marginTop: '2px' }}>
                   Configure Stock Name, Min Buy Limit, Daily Interest (2% - 12%), and Deposit QR.
@@ -708,7 +721,6 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                   border: 'none',
                   color: '#94a3b8',
                   cursor: 'pointer',
-                  fontSize: '14px',
                   width: '28px',
                   height: '28px',
                   borderRadius: '50%',
@@ -717,7 +729,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                   justifyContent: 'center',
                 }}
               >
-                ✕
+                <X size={14} />
               </button>
             </div>
 
@@ -916,9 +928,12 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                             cursor: 'pointer',
                             marginTop: '2px',
                             padding: 0,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
                           }}
                         >
-                          ✕ Reset to Auto-Generated UPI QR
+                          <X size={10} /> Reset to Auto-Generated UPI QR
                         </button>
                       )}
                     </div>
@@ -946,7 +961,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                     5. Stock Availability Status
                   </div>
                   <div style={{ fontSize: '11px', color: formData.isEnabled ? '#10b981' : '#f87171', fontWeight: 600, marginTop: '2px' }}>
-                    {formData.isEnabled ? '🟢 ENABLED (Visible & tradable by users)' : '🔴 DISABLED (Hidden from users in portal & APK)'}
+                    {formData.isEnabled ? 'ENABLED (Visible & tradable by users)' : 'DISABLED (Hidden from users in portal & APK)'}
                   </div>
                 </div>
                 <input
@@ -980,9 +995,20 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                     borderRadius: '4px',
                     cursor: 'pointer',
                     boxShadow: '0 2px 10px rgba(16, 185, 129, 0.4)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
                   }}
                 >
-                  {editingAsset ? '💾 Save Changes' : '➕ Create Stock'}
+                  {editingAsset ? (
+                    <>
+                      <Save size={13} /> Save Changes
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={13} /> Create Stock
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -1035,10 +1061,11 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                   border: 'none',
                   color: '#94a3b8',
                   cursor: 'pointer',
-                  fontSize: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
                 }}
               >
-                ✕
+                <X size={16} />
               </button>
             </div>
 

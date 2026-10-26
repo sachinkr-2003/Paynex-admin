@@ -21,6 +21,7 @@ import {
 import { exportToExcel } from './utils/exportToExcel';
 import adminApi from './services/api';
 import { showConfirmDialog, showToast as swalToast } from './utils/swal';
+import { Zap, X } from 'lucide-react';
 
 export default function App() {
   const [currentAdmin, setCurrentAdmin] = useState(() => {
@@ -178,7 +179,7 @@ export default function App() {
     ];
 
     exportToExcel('PAYNEX_Master_Platform_Audit_Log', headers, combinedData);
-    showToast('📊 Platform Master Audit exported to Excel (.csv)!');
+    showToast('Platform Master Audit exported to Excel (.csv)!');
   };
 
   const handleAdminLoginSuccess = (user, token) => {
@@ -322,13 +323,13 @@ export default function App() {
       {/* Floating Square Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 bg-[#141a26] text-amber-500 border border-[#2b374e] border-l-4 border-l-amber-500 shadow-2xl py-3 px-4 text-xs font-semibold flex items-center gap-2.5 z-[9999] rounded-none">
-          <span className="text-base">⚡</span>
+          <Zap size={15} className="text-amber-500 shrink-0" />
           <span>{toastMessage}</span>
           <button
             onClick={() => setToastMessage(null)}
-            className="bg-transparent border-none text-amber-500 hover:text-white cursor-pointer text-sm px-1 ml-2"
+            className="bg-transparent border-none text-amber-500 hover:text-white cursor-pointer p-0 ml-2 flex items-center"
           >
-            ✕
+            <X size={14} />
           </button>
         </div>
       )}

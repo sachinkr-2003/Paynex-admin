@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { exportToExcel } from '../utils/exportToExcel';
 import adminApi from '../services/api';
 import { showConfirmDialog, showSuccessAlert, showToast as swalToast } from '../utils/swal';
+import { QrCode, Zap, X, Landmark, Copy, Check, ArrowDownToLine } from 'lucide-react';
 
 export default function WithdrawalsPage({
   withdrawals,
@@ -246,7 +247,7 @@ export default function WithdrawalsPage({
               {filteredWithdrawals.length === 0 ? (
                 <tr>
                   <td colSpan="9" style={{ padding: '36px 14px', textAlign: 'center', color: '#8b9bb4', fontSize: '13px' }}>
-                    🏧 No withdrawal payout requests found. New withdrawal requests from traders will appear here live!
+                    No withdrawal payout requests found. New withdrawal requests from traders will appear here live!
                   </td>
                 </tr>
               ) : (
@@ -298,10 +299,10 @@ export default function WithdrawalsPage({
                           </div>
                         </div>
                         <span
-                          style={{ fontSize: '10.5px', color: '#f59e0b', cursor: 'pointer', fontWeight: 600 }}
+                          style={{ fontSize: '10.5px', color: '#f59e0b', cursor: 'pointer', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                           onClick={() => setReleaseModalItem(w)}
                         >
-                          📲 Scan Payout QR (₹{w.amount.toLocaleString('en-IN')})
+                          <QrCode size={11} /> Scan Payout QR (₹{w.amount.toLocaleString('en-IN')})
                         </span>
                       </div>
                     </div>
@@ -347,7 +348,7 @@ export default function WithdrawalsPage({
                           }}
                           title="Scan dynamic QR code with exact payout amount pre-filled"
                         >
-                          <span>📲</span>
+                          <QrCode size={13} />
                           <span>Scan QR (₹{w.amount.toLocaleString('en-IN')})</span>
                         </button>
                         <button
@@ -360,7 +361,7 @@ export default function WithdrawalsPage({
                       </div>
                     ) : (
                       <div style={{ textAlign: 'center', fontSize: '11.5px', color: w.status === 'Completed' ? '#10b981' : '#64748b', fontWeight: 600 }}>
-                        {w.status === 'Completed' ? '✅ Disbursed' : '❌ Rejected'}
+                        {w.status === 'Completed' ? 'Disbursed' : 'Rejected'}
                       </div>
                     )}
                   </td>
@@ -407,7 +408,7 @@ export default function WithdrawalsPage({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '20px' }}>⚡</span>
+                  <Zap size={20} color="#f59e0b" />
                   <h3 style={{ fontSize: '17px', fontWeight: 800, margin: 0, color: '#f1f5f9' }}>
                     Scan & Pay Withdrawal Payout
                   </h3>
@@ -423,7 +424,6 @@ export default function WithdrawalsPage({
                   border: 'none',
                   color: '#94a3b8',
                   cursor: 'pointer',
-                  fontSize: '14px',
                   width: '28px',
                   height: '28px',
                   borderRadius: '50%',
@@ -432,7 +432,7 @@ export default function WithdrawalsPage({
                   justifyContent: 'center',
                 }}
               >
-                ✕
+                <X size={14} />
               </button>
             </div>
 
@@ -459,8 +459,8 @@ export default function WithdrawalsPage({
                   marginBottom: '14px',
                 }}
               >
-                <span style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 800, letterSpacing: '0.5px' }}>
-                  ⚡ EXACT PAYOUT: ₹{releaseModalItem.amount.toLocaleString('en-IN')} AUTO-ENCODED
+                <span style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 800, letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Zap size={12} /> EXACT PAYOUT: ₹{releaseModalItem.amount.toLocaleString('en-IN')} AUTO-ENCODED
                 </span>
               </div>
 
@@ -506,7 +506,7 @@ export default function WithdrawalsPage({
               </div>
 
               <p style={{ fontSize: '12px', color: '#94a3b8', margin: '12px 0 0', lineHeight: 1.4 }}>
-                📲 <strong>Admin Instruction:</strong> Scan this QR using any UPI app on your phone.
+                <strong>Admin Instruction:</strong> Scan this QR using any UPI app on your phone.
                 Amount <strong style={{ color: '#f59e0b' }}>₹{releaseModalItem.amount.toLocaleString('en-IN')}</strong> and payee <strong style={{ color: '#fff' }}>{releaseModalItem.traderName}</strong> are automatically pre-filled!
               </p>
             </div>
@@ -534,7 +534,9 @@ export default function WithdrawalsPage({
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: '#8b9bb4' }}>Disbursement Rail:</span>
-                <span className="square-badge badge-green">🏦 IMPS Direct Bank Transfer</span>
+                <span className="square-badge badge-green flex items-center gap-1">
+                  <Landmark size={12} /> IMPS Direct Bank Transfer
+                </span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -562,9 +564,12 @@ export default function WithdrawalsPage({
                         fontSize: '11px',
                         cursor: 'pointer',
                         fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
                       }}
                     >
-                      📋 Copy A/C
+                      <Copy size={11} /> Copy A/C
                     </button>
                   )}
                 </div>
@@ -588,9 +593,12 @@ export default function WithdrawalsPage({
                         fontSize: '11px',
                         cursor: 'pointer',
                         fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
                       }}
                     >
-                      📋 Copy IFSC
+                      <Copy size={11} /> Copy IFSC
                     </button>
                   )}
                 </div>
@@ -613,9 +621,12 @@ export default function WithdrawalsPage({
                       fontSize: '11px',
                       cursor: 'pointer',
                       fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
                     }}
                   >
-                    📋 Copy ₹
+                    <Copy size={11} /> Copy ₹
                   </button>
                 </div>
               </div>
@@ -643,9 +654,13 @@ export default function WithdrawalsPage({
                   cursor: 'pointer',
                   width: '100%',
                   fontFamily: 'monospace',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '5px',
                 }}
               >
-                📋 Copy Raw UPI Deep Link String
+                <Copy size={12} /> Copy Raw UPI Deep Link String
               </button>
             </div>
 
@@ -680,9 +695,12 @@ export default function WithdrawalsPage({
                     borderRadius: '4px',
                     cursor: 'pointer',
                     boxShadow: '0 2px 10px rgba(16, 185, 129, 0.4)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
                   }}
                 >
-                  ✅ I Have Paid / Release IMPS
+                  <Check size={14} strokeWidth={3} /> I Have Paid / Release IMPS
                 </button>
               </div>
             </div>

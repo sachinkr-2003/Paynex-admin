@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { exportToExcel } from '../utils/exportToExcel';
+import { X } from 'lucide-react';
 
 export default function PlansPage({ plans, setPlans, showToast, searchQuery = '' }) {
   const [editingPlan, setEditingPlan] = useState(null);
@@ -23,7 +24,7 @@ export default function PlansPage({ plans, setPlans, showToast, searchQuery = ''
       { label: 'Status', accessor: (p) => (p.isEnabled ? 'ENABLED' : 'DISABLED') },
     ];
     exportToExcel('PAYNEX_Investment_Plans', headers, filteredPlans);
-    showToast('📊 Plans sheet exported to Excel');
+    showToast('Plans sheet exported to Excel');
   };
 
   const handleTogglePlan = (id) => {
@@ -49,7 +50,7 @@ export default function PlansPage({ plans, setPlans, showToast, searchQuery = ''
     setPlans((prev) =>
       prev.map((p) => (p.id === editingPlan.id ? { ...p, ...formValues } : p))
     );
-    showToast(`✅ Plan ${editingPlan.name} updated successfully!`);
+    showToast(`Plan ${editingPlan.name} updated successfully!`);
     setEditingPlan(null);
   };
 
@@ -186,9 +187,9 @@ export default function PlansPage({ plans, setPlans, showToast, searchQuery = ''
               </h3>
               <button
                 onClick={() => setEditingPlan(null)}
-                style={{ background: 'none', border: 'none', color: '#8b9bb4', cursor: 'pointer', fontSize: '14px' }}
+                style={{ background: 'none', border: 'none', color: '#8b9bb4', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
               >
-                ✕
+                <X size={15} />
               </button>
             </div>
 

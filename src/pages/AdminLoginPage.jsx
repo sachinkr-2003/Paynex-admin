@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import adminApi from '../services/api';
 import { showSuccessAlert, showErrorAlert } from '../utils/swal';
+import { ShieldCheck, Zap, AlertTriangle, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 
 export default function AdminLoginPage({ onLoginSuccess }) {
   const [email, setEmail] = useState('admin@paynex.com');
@@ -108,7 +109,7 @@ export default function AdminLoginPage({ onLoginSuccess }) {
         {/* Form Title */}
         <div className="mb-6">
           <h1 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
-            <span>🛡️</span> Terminal Sign In
+            <ShieldCheck size={20} className="text-amber-500" /> Terminal Sign In
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             Institutional exchange administration console. Enter root credentials.
@@ -126,14 +127,14 @@ export default function AdminLoginPage({ onLoginSuccess }) {
           className="w-full mb-5 py-2.5 px-4 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-400 text-xs font-bold tracking-wide flex items-center justify-center gap-2 transition-all cursor-pointer"
           style={{ borderRadius: '0px' }}
         >
-          <span>⚡</span>
+          <Zap size={14} className="text-amber-400" />
           <span>1-Click Auto Fill & Instant Admin Sign In</span>
         </button>
 
         {/* Error Banner */}
         {errorMessage && (
           <div className="mb-4 p-3 bg-red-500/10 border border-red-500/40 text-red-400 text-xs flex items-center gap-2 font-medium">
-            <span>⚠️</span>
+            <AlertTriangle size={15} className="text-red-400 shrink-0" />
             <span>{errorMessage}</span>
           </div>
         )}
@@ -144,9 +145,9 @@ export default function AdminLoginPage({ onLoginSuccess }) {
             <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
               Admin Email / Identifier
             </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                📧
+            <div className="relative flex items-center">
+              <span className="absolute left-3 text-slate-400">
+                <Mail size={14} />
               </span>
               <input
                 type="email"
@@ -173,9 +174,9 @@ export default function AdminLoginPage({ onLoginSuccess }) {
                 {showPassword ? 'Hide' : 'Show'}
               </button>
             </div>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                🔒
+            <div className="relative flex items-center">
+              <span className="absolute left-3 text-slate-400">
+                <Lock size={14} />
               </span>
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -198,13 +199,13 @@ export default function AdminLoginPage({ onLoginSuccess }) {
             >
               {isLoading ? (
                 <>
-                  <span className="animate-spin text-sm">↻</span>
+                  <Loader2 size={14} className="animate-spin" />
                   <span>Verifying Clearances...</span>
                 </>
               ) : (
                 <>
                   <span>AUTHENTICATE & OPEN CONSOLE</span>
-                  <span>→</span>
+                  <ArrowRight size={14} />
                 </>
               )}
             </button>
@@ -218,7 +219,7 @@ export default function AdminLoginPage({ onLoginSuccess }) {
             <span className="text-amber-400 font-mono">admin123</span>
           </div>
           <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-center gap-1.5 font-mono">
-            <span>🔒</span> 256-Bit TLS End-to-End Encrypted Session
+            <Lock size={12} className="text-slate-400" /> 256-Bit TLS End-to-End Encrypted Session
           </div>
         </div>
       </div>
