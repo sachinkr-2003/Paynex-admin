@@ -119,10 +119,15 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify(assetData),
     }),
-  updateAsset: (id, updates) =>
-    request(`/assets/admin/${encodeURIComponent(id)}`, {
+  toggleAssetStatus: (id, isEnabled, symbol, _id) =>
+    request('/assets/admin/toggle-status', {
       method: 'PUT',
-      body: JSON.stringify(updates),
+      body: JSON.stringify({ id, isEnabled, symbol, _id }),
+    }),
+  updateAsset: (id, updates) =>
+    request('/assets/admin/update', {
+      method: 'PUT',
+      body: JSON.stringify({ ...updates, id, _id: updates?._id }),
     }),
   deleteAsset: (id) =>
     request(`/assets/admin/${encodeURIComponent(id)}`, {

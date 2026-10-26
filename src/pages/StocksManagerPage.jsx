@@ -265,17 +265,26 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
       )
     );
 
-    // 3. Sync to backend API
+    // 3. Sync to backend API via dedicated toggle status endpoint
     try {
-      const assetIdentifier = item.id || item.symbol || item._id;
-      await adminApi.updateAsset(assetIdentifier, { isEnabled: nextStatus });
+      const res = await adminApi.toggleAssetStatus(item.id, nextStatus, item.symbol, item._id);
       showAdminSuccess(
         nextStatus ? 'Stock Enabled' : 'Stock Disabled',
-        `"${item.name}" is now ${nextStatus ? 'ACTIVE (visible in trading portal)' : 'DISABLED (hidden from users)'}.`
+        `"${item.name}" is now ${nextStatus ? 'ACTIVE (visible in user app & portal)' : 'DISABLED (hidden & blocked from trading)'}.`
       );
+      // Re-sync server stats and active counts
+      fetchAssets();
     } catch (err) {
-      console.warn('Backend toggle status sync notice:', err.message);
-      showToast?.(`Status: ${item.name} is now ${nextStatus ? 'ACTIVE' : 'DISABLED'}`);
+      console.error('Backend toggle status sync error:', err.message);
+      // Revert optimistic update on failure
+      setAssets((prev) =>
+        prev.map((a) =>
+          (a.id === item.id || a._id === item._id || (a.symbol && a.symbol === item.symbol))
+            ? { ...a, isEnabled: currentEnabled }
+            : a
+        )
+      );
+      showAdminError('Toggle Status Failed', err.message || 'Could not update stock status in backend.');
     }
   };
 
