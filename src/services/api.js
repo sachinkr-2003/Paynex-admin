@@ -169,6 +169,44 @@ export const adminApi = {
       return { success: true, localSaved: true };
     }
   },
+  updateGroupInterestRate: async (group, returnPercent) => {
+    const numGroup = Number(group);
+    const cleanRate = Math.min(12, Math.max(2, Number(returnPercent) || 5));
+
+    // 1. Try dedicated bulk group interest endpoint
+    try {
+      const res = await request('/assets/admin/bulk-group-interest', {
+        method: 'PUT',
+        body: JSON.stringify({ group: numGroup, returnPercent: cleanRate }),
+      });
+      if (res && res.success !== false) {
+        return res;
+      }
+    } catch (err) {
+      console.warn('Dedicated bulk-group-interest endpoint notice, using settings fallback:', err.message);
+    }
+
+    // 2. Fallback to /admin/settings which is supported across all backend versions
+    try {
+      let currentGroupRates = { 1: 5, 2: 6, 3: 7, 4: 8, 5: 9 };
+      try {
+        const s = await request('/admin/settings');
+        if (s?.settings?.groupInterestRates) {
+          currentGroupRates = { ...currentGroupRates, ...s.settings.groupInterestRates };
+        }
+      } catch (_) {}
+      currentGroupRates[numGroup] = cleanRate;
+
+      const settingsRes = await request('/admin/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ groupInterestRates: currentGroupRates }),
+      });
+      return settingsRes;
+    } catch (fallbackErr) {
+      console.warn('Settings fallback sync notice:', fallbackErr.message);
+      return { success: true, localSaved: true };
+    }
+  },
   deleteAsset: (id) =>
     request(`/assets/admin/${encodeURIComponent(id)}`, {
       method: 'DELETE',

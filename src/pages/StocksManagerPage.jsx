@@ -16,6 +16,8 @@ import {
   getStockGroup,
   getSavedGroupQrs,
   saveGroupQrToStorage,
+  getSavedGroupInterestRates,
+  saveGroupInterestRateToStorage,
 } from '../data/stocksData';
 import AssetIcon from '../components/AssetIcon';
 import { TrendingUp, QrCode, Check, X, Edit, Trash2, Plus, Save, Ban, Upload, Layers } from 'lucide-react';
@@ -48,14 +50,17 @@ const saveCustomQrToStorage = (assetKey, data) => {
 const mergeCustomQrsWithAssets = (assetList) => {
   const saved = getSavedCustomQrs();
   const groupQrs = getSavedGroupQrs();
+  const groupRates = getSavedGroupInterestRates();
   return assetList.map((item, idx) => {
     const key = (item.id || item.symbol || '').toUpperCase();
     const symKey = (item.symbol || '').toUpperCase();
     const custom = saved[key] || saved[symKey] || (item.id ? saved[item.id] : null) || (item._id ? saved[item._id] : null);
     const grp = getStockGroup(item, idx);
     const groupQr = (groupQrs && groupQrs[grp]) ? groupQrs[grp].trim() : '';
+    const groupRate = groupRates && groupRates[grp] ? Number(groupRates[grp]) : null;
 
     const effectiveQr = groupQr || custom?.qrCode || item.qrCode || '';
+    const effectiveRate = groupRate || Number(custom?.returnPercent ?? item.returnPercent ?? 5);
 
     if (custom) {
       return {
@@ -65,6 +70,7 @@ const mergeCustomQrsWithAssets = (assetList) => {
         upiId: custom.upiId !== undefined && custom.upiId.trim() ? custom.upiId : item.upiId,
         payeeName: custom.payeeName !== undefined && custom.payeeName.trim() ? custom.payeeName : item.payeeName,
         qrCode: effectiveQr,
+        returnPercent: effectiveRate,
       };
     }
     return {
@@ -72,6 +78,7 @@ const mergeCustomQrsWithAssets = (assetList) => {
       group: grp,
       isEnabled: item.isEnabled !== false,
       qrCode: effectiveQr,
+      returnPercent: effectiveRate,
     };
   });
 };
@@ -82,7 +89,9 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'DISABLED'
   const [groupFilter, setGroupFilter] = useState('ALL'); // 'ALL' | 1 | 2 | 3 | 4 | 5
   const [groupQrs, setGroupQrs] = useState(getSavedGroupQrs);
+  const [groupRates, setGroupRates] = useState(getSavedGroupInterestRates);
   const [groupUploading, setGroupUploading] = useState(null);
+  const [groupRateSaving, setGroupRateSaving] = useState(null);
 
   // Modal State for Add / Edit Asset (Full CRUD)
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -119,6 +128,21 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
           if (sRes?.settings?.groupQrs) {
             setGroupQrs(sRes.settings.groupQrs);
             localStorage.setItem('paynex_group_qrs', JSON.stringify(sRes.settings.groupQrs));
+          }
+        } catch (_) {}
+      }
+      if (res && res.groupInterestRates) {
+        setGroupRates(res.groupInterestRates);
+        try {
+          localStorage.setItem('paynex_group_interest_rates', JSON.stringify(res.groupInterestRates));
+        } catch (_) {}
+      } else {
+        // Fallback: check if settings has groupInterestRates
+        try {
+          const sRes = await adminApi.getSettings();
+          if (sRes?.settings?.groupInterestRates) {
+            setGroupRates(sRes.settings.groupInterestRates);
+            localStorage.setItem('paynex_group_interest_rates', JSON.stringify(sRes.settings.groupInterestRates));
           }
         } catch (_) {}
       }
@@ -231,6 +255,54 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
       fetchAssets();
     } catch (err) {
       showAdminError('Remove QR Failed', err.message);
+    }
+  };
+
+  // Handle 1-Click Group Interest Rate Change
+  const handleGroupRateChange = async (groupNum, newRate) => {
+    const cleanRate = Math.min(12, Math.max(2, Number(newRate) || 5));
+    try {
+      setGroupRateSaving(groupNum);
+      // 1. Save to local storage
+      saveGroupInterestRateToStorage(groupNum, cleanRate);
+      // Synchronize individual custom storage for this group so no conflicting override lingers
+      try {
+        const customQrs = getSavedCustomQrs();
+        assets.forEach((a) => {
+          const grp = getStockGroup(a);
+          if (grp === groupNum) {
+            const k1 = (a.id || '').toUpperCase();
+            const k2 = (a.symbol || '').toUpperCase();
+            if (k1 && customQrs[k1]) customQrs[k1].returnPercent = cleanRate;
+            if (k2 && customQrs[k2]) customQrs[k2].returnPercent = cleanRate;
+          }
+        });
+        localStorage.setItem(QR_STORAGE_KEY, JSON.stringify(customQrs));
+      } catch (_) {}
+
+      // 2. Update local state optimistically
+      setGroupRates((prev) => ({ ...prev, [groupNum]: cleanRate }));
+      setAssets((prev) =>
+        prev.map((a) => {
+          const grp = getStockGroup(a);
+          if (grp === groupNum) {
+            return { ...a, returnPercent: cleanRate };
+          }
+          return a;
+        })
+      );
+
+      // 3. Sync to backend API
+      await adminApi.updateGroupInterestRate(groupNum, cleanRate);
+      showAdminSuccess(
+        `Group ${groupNum} Interest Set to +${cleanRate}%`,
+        `Daily return for all 12 companies in Group ${groupNum} has been updated to +${cleanRate}%!`
+      );
+      fetchAssets();
+    } catch (err) {
+      showAdminError('Group Interest Update Failed', err.message);
+    } finally {
+      setGroupRateSaving(null);
     }
   };
 
@@ -560,10 +632,10 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
           <div>
             <div style={{ fontSize: '14px', fontWeight: 800, color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Layers size={16} color="#f59e0b" /> 5-Group Company QR Manager (1-Click Bulk QR Update)
+              <Layers size={16} color="#f59e0b" /> 5-Group Company Engine (1-Click Bulk QR & Group Interest Setup)
             </div>
             <div style={{ fontSize: '11.5px', color: '#94a3b8', marginTop: '2px' }}>
-              All 60 companies are divided into 5 groups (12 stocks each). Upload a QR here to update all 12 companies in that group at once!
+              All 60 companies are divided into 5 groups (12 stocks each). Set Group QR and Interest Rate (+2% to +12%) here to apply to all 12 companies in that group at once!
             </div>
           </div>
           <span style={{ fontSize: '11px', color: '#10b981', fontWeight: 700, background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '3px 8px', borderRadius: '4px' }}>
@@ -575,7 +647,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
             gap: '12px',
           }}
         >
@@ -585,6 +657,8 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
             const groupStocks = assets.filter((a) => (a.group || getStockGroup(a)) === grpId);
             const isSelected = groupFilter === grpId;
             const isUploading = groupUploading === grpId;
+            const isRateSaving = groupRateSaving === grpId;
+            const currentRate = groupRates[grpId] || (groupStocks[0] ? Number(groupStocks[0].returnPercent) : 5);
             const previewUrl = grpQr || (groupStocks[0] ? getCompanyQrUrl(groupStocks[0]) : '');
 
             return (
@@ -629,7 +703,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 </div>
 
                 {/* QR Preview & Status */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '2px 0' }}>
                   <div
                     onClick={() => {
                       if (previewUrl) {
@@ -641,8 +715,8 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                       }
                     }}
                     style={{
-                      width: '64px',
-                      height: '64px',
+                      width: '60px',
+                      height: '60px',
                       background: '#fff',
                       borderRadius: '6px',
                       padding: '3px',
@@ -675,6 +749,66 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                     <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px', lineHeight: '1.2' }}>
                       {grpQr ? 'Applied to all 12 stocks' : '1-click to override all 12'}
                     </div>
+                  </div>
+                </div>
+
+                {/* 1-Click Group Interest Rate Setup */}
+                <div
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    borderRadius: '6px',
+                    padding: '8px 10px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <TrendingUp size={12} color="#10b981" /> Group Interest:
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        color: '#10b981',
+                        background: 'rgba(16, 185, 129, 0.15)',
+                        border: '1px solid rgba(16, 185, 129, 0.35)',
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      +{currentRate}% Return
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <select
+                      value={currentRate}
+                      disabled={isRateSaving}
+                      onChange={(e) => handleGroupRateChange(grpId, e.target.value)}
+                      style={{
+                        width: '100%',
+                        height: '26px',
+                        background: '#0f172a',
+                        border: '1px solid rgba(16, 185, 129, 0.4)',
+                        borderRadius: '4px',
+                        color: '#34d399',
+                        fontWeight: 800,
+                        fontSize: '11px',
+                        padding: '0 6px',
+                        cursor: isRateSaving ? 'wait' : 'pointer',
+                        outline: 'none',
+                      }}
+                      title={`Change interest rate for all companies in Group ${grpId}`}
+                    >
+                      {[2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12].map((r) => (
+                        <option key={r} value={r} style={{ background: '#0f172a', color: '#f1f5f9' }}>
+                          +{r}% Guaranteed Daily Profit
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

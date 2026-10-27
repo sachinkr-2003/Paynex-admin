@@ -834,6 +834,30 @@ export const saveGroupQrToStorage = (group, qrCode) => {
   }
 };
 
+export const GROUP_INTEREST_STORAGE_KEY = 'paynex_group_interest_rates';
+
+export const DEFAULT_GROUP_INTEREST = { 1: 5, 2: 6, 3: 7, 4: 8, 5: 9 };
+
+export const getSavedGroupInterestRates = () => {
+  try {
+    const raw = localStorage.getItem(GROUP_INTEREST_STORAGE_KEY);
+    return raw ? { ...DEFAULT_GROUP_INTEREST, ...JSON.parse(raw) } : { ...DEFAULT_GROUP_INTEREST };
+  } catch {
+    return { ...DEFAULT_GROUP_INTEREST };
+  }
+};
+
+export const saveGroupInterestRateToStorage = (group, rate) => {
+  try {
+    const current = getSavedGroupInterestRates();
+    current[group] = Math.min(12, Math.max(2, Number(rate) || 5));
+    localStorage.setItem(GROUP_INTEREST_STORAGE_KEY, JSON.stringify(current));
+    return current;
+  } catch {
+    return null;
+  }
+};
+
 export const getCustomQrOverride = (stock) => {
   try {
     const raw = localStorage.getItem('paynex_custom_stock_qrs');
@@ -875,10 +899,13 @@ export const enrichStockWithPayment = (s, idx = 0) => {
   const grp = getStockGroup(s, idx);
   const groupQrs = getSavedGroupQrs();
   const groupQr = (groupQrs && groupQrs[grp]) ? groupQrs[grp].trim() : '';
+  const groupRates = getSavedGroupInterestRates();
+  const groupRate = groupRates && groupRates[grp] ? Number(groupRates[grp]) : null;
+
   const custom = getCustomQrOverride(s);
   const defaultQr = groupQr || custom?.qrCode || s.qrCode || '';
-  const rawRet = Number(custom?.returnPercent ?? s.returnPercent ?? 12);
-  const effectiveReturn = Number(rawRet) || 12;
+  const rawRet = groupRate || Number(custom?.returnPercent ?? s.returnPercent ?? 5);
+  const effectiveReturn = Math.min(12, Math.max(2, Number(rawRet) || 5));
   const effectiveEnabled = custom?.isEnabled !== undefined ? Boolean(custom.isEnabled) : (s.isEnabled !== false);
 
   return {
