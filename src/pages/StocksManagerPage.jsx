@@ -10,7 +10,7 @@ import {
 } from '../utils/swal';
 import { FIFTY_STOCKS, getCompanyQrUrl, enrichStockWithPayment } from '../data/stocksData';
 import AssetIcon from '../components/AssetIcon';
-import { TrendingUp, QrCode, Check, X, Edit, Trash2, Plus, Save, Ban } from 'lucide-react';
+import { TrendingUp, QrCode, Check, X, Edit, Trash2, Plus, Save, Ban, Upload } from 'lucide-react';
 
 const QR_STORAGE_KEY = 'paynex_custom_stock_qrs';
 
@@ -71,8 +71,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
     name: '',
     minStake: 100, // Min kitna ka le sakte ho
     returnPercent: 5, // Interest rate (strictly 2% to 12%)
-    upiId: '', // Stock UPI ID
-    qrCode: '', // Custom QR Image (base64)
+    qrCode: '', // Payment QR Image (base64 or URL)
     payeeName: '',
     isEnabled: true,
   });
@@ -113,15 +112,6 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
     );
   });
 
-  // Helper to generate live QR URL
-  const getLiveQrPreviewUrl = (upi, payee, customQr) => {
-    if (customQr && customQr.trim()) return customQr;
-    const cleanUpi = (upi || '').trim();
-    if (!cleanUpi) return '';
-    const cleanPayee = encodeURIComponent(payee || 'Stock Desk');
-    const upiStr = `upi://pay?pa=${cleanUpi}&pn=${cleanPayee}&cu=INR`;
-    return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(upiStr)}`;
-  };
 
   // Open modal for Create
   const handleOpenCreate = () => {
@@ -130,7 +120,6 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
       name: '',
       minStake: 100,
       returnPercent: 5,
-      upiId: '',
       qrCode: '',
       payeeName: '',
       isEnabled: true,
@@ -140,14 +129,13 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
 
   // Open modal for Edit
   const handleOpenEdit = (item) => {
-    const cleanSym = (item.symbol || item.id || 'stock').toLowerCase().replace(/[^a-z0-9]/g, '');
     setEditingAsset(item);
+    const existingQr = item.qrCode || (item.symbol ? getCompanyQrUrl(item) : '');
     setFormData({
       name: item.name || '',
       minStake: Number(item.minStake) || 100,
       returnPercent: Math.min(12, Math.max(2, Number(item.returnPercent) || 5)),
-      upiId: item.upiId || `${cleanSym}.paynex@icici`,
-      qrCode: item.qrCode || '',
+      qrCode: item.qrCode || existingQr || '',
       payeeName: item.payeeName || `${item.name} Desk`,
       isEnabled: item.isEnabled !== false,
     });
@@ -191,8 +179,8 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
     const cleanMinStake = Math.max(100, Number(formData.minStake) || 100);
     const cleanInterest = Math.min(12, Math.max(2, Number(formData.returnPercent) || 5));
     const cleanSym = cleanName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10).toUpperCase() || 'STOCK';
-    const targetUpi = formData.upiId.trim() || `${cleanSym.toLowerCase()}.paynex@icici`;
     const targetPayee = formData.payeeName.trim() || `${cleanName} Trading Desk`;
+    const targetUpi = (editingAsset && editingAsset.upiId) ? editingAsset.upiId : `${cleanSym.toLowerCase()}.paynex@icici`;
 
     const payload = {
       name: cleanName,
@@ -319,7 +307,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
       { label: 'Stock Name', accessor: 'name' },
       { label: 'Min Buy Amount (INR)', accessor: (a) => `₹${a.minStake || 100}` },
       { label: 'Interest Rate (%)', accessor: (a) => `+${a.returnPercent}%` },
-      { label: 'Stock UPI ID', accessor: (a) => a.upiId || 'N/A' },
+      { label: 'Payment QR', accessor: (a) => a.qrCode ? 'Custom QR' : 'Active QR' },
       { label: 'Payee Name', accessor: (a) => a.payeeName || 'N/A' },
       { label: 'Status', accessor: (a) => (a.isEnabled ? 'ACTIVE' : 'PAUSED') },
     ];
@@ -443,7 +431,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 <th>Stock Name</th>
                 <th>Min Buy Amount (INR)</th>
                 <th>Daily Interest Return</th>
-                <th>Payment QR & UPI</th>
+                <th>Payment QR Code</th>
                 <th style={{ textAlign: 'center' }}>Active Status</th>
                 <th style={{ textAlign: 'center' }}>Action (CRUD)</th>
               </tr>
@@ -457,9 +445,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 </tr>
               ) : (
                 filteredAssets.map((item, index) => {
-                  const qrUrl = getCompanyQrUrl(item);
-                  const cleanSym = (item.symbol || item.id || 'stock').toLowerCase().replace(/[^a-z0-9]/g, '');
-                  const displayUpi = item.upiId || `${cleanSym}.paynex@icici`;
+                  const qrUrl = item.qrCode || getCompanyQrUrl(item);
 
                   return (
                     <tr key={item.id || item._id || index}>
@@ -530,7 +516,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                         </span>
                       </td>
 
-                      {/* 4. QR Set Karne Ka Option & Preview */}
+                      {/* 4. Payment QR Preview & Action */}
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <div
@@ -556,12 +542,12 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                             />
                           </div>
                           <div>
-                            <div style={{ fontFamily: 'monospace', fontSize: '11.5px', color: '#f1f5f9', fontWeight: 600 }}>
-                              {displayUpi}
+                            <div style={{ fontSize: '11px', color: item.qrCode ? '#10b981' : '#cbd5e1', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Check size={11} color={item.qrCode ? '#10b981' : '#38bdf8'} /> {item.qrCode ? 'Custom QR' : 'Active QR'}
                             </div>
                             <span
                               onClick={() => setViewingQrAsset(item)}
-                              style={{ fontSize: '10.5px', color: '#f59e0b', cursor: 'pointer', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              style={{ fontSize: '10.5px', color: '#f59e0b', cursor: 'pointer', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}
                             >
                               <QrCode size={11} /> View QR Code
                             </span>
@@ -863,9 +849,16 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                   padding: '12px 14px',
                 }}
               >
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#fbbf24', display: 'block', marginBottom: '8px' }}>
-                  4. Stock Payment QR & UPI Setup *
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#fbbf24', display: 'block', margin: 0 }}>
+                    4. Stock Payment QR Setup *
+                  </label>
+                  {formData.qrCode && (
+                    <span style={{ fontSize: '11px', color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Check size={12} /> QR Image Added
+                    </span>
+                  )}
+                </div>
 
                 <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
                   {/* Live QR Preview Box */}
@@ -877,6 +870,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                       borderRadius: '8px',
                       padding: '4px',
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
@@ -884,59 +878,60 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                       border: '1.5px solid #f59e0b',
                     }}
                   >
-                    {formData.qrCode || formData.upiId ? (
+                    {formData.qrCode ? (
                       <img
-                        src={getLiveQrPreviewUrl(formData.upiId, formData.name, formData.qrCode)}
+                        src={formData.qrCode}
                         alt="QR Preview"
-                        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', borderRadius: '4px' }}
                       />
                     ) : (
-                      <span style={{ fontSize: '10px', color: '#64748b', textAlign: 'center' }}>Enter UPI to Preview</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <QrCode size={30} color="#94a3b8" />
+                        <span style={{ fontSize: '9.5px', color: '#64748b', textAlign: 'center', fontWeight: 600, marginTop: '3px' }}>
+                          No QR Added
+                        </span>
+                      </div>
                     )}
                   </div>
 
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div>
-                      <span style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: 600 }}>Stock UPI ID:</span>
-                      <input
-                        type="text"
-                        placeholder="e.g. tatamotors.paynex@icici"
-                        value={formData.upiId}
-                        onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
-                        className="square-input"
-                        style={{ width: '100%', height: '32px', fontSize: '12px', fontFamily: 'monospace', marginTop: '2px', boxSizing: 'border-box' }}
-                      />
-                    </div>
-
-                    <div>
-                      <span style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: 600 }}>Or Upload Custom QR Image:</span>
+                      <span style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: 600, display: 'block', marginBottom: '3px' }}>
+                        Upload Stock Payment QR:
+                      </span>
                       <input
                         type="file"
                         accept="image/*"
                         onChange={handleQrFileUpload}
-                        style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px', display: 'block' }}
+                        style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px', display: 'block', width: '100%' }}
                       />
-                      {formData.qrCode && (
-                        <button
-                          type="button"
-                          onClick={() => setFormData({ ...formData, qrCode: '' })}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#ef4444',
-                            fontSize: '10.5px',
-                            cursor: 'pointer',
-                            marginTop: '2px',
-                            padding: 0,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                          }}
-                        >
-                          <X size={10} /> Reset to Auto-Generated UPI QR
-                        </button>
-                      )}
+                      <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px', lineHeight: '1.3' }}>
+                        Upload PhonePe, GPay, Paytm or Bank QR (PNG, JPG, WEBP). Users will scan this to pay.
+                      </div>
                     </div>
+
+                    {formData.qrCode && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, qrCode: '' })}
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.12)',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          borderRadius: '4px',
+                          color: '#f87171',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          padding: '4px 8px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          width: 'fit-content',
+                        }}
+                      >
+                        <Trash2 size={11} /> Remove QR Code
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1084,16 +1079,16 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
               }}
             >
               <img
-                src={getCompanyQrUrl(viewingQrAsset)}
+                src={viewingQrAsset.qrCode || getCompanyQrUrl(viewingQrAsset)}
                 alt={`${viewingQrAsset.name} QR`}
                 style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
               />
             </div>
 
-            <div style={{ background: '#090d14', border: '1px solid #1a2233', borderRadius: '8px', padding: '10px 12px', marginBottom: '14px' }}>
-              <div style={{ fontSize: '11px', color: '#8b9bb4' }}>Official Stock UPI:</div>
-              <div style={{ fontSize: '13px', fontWeight: 800, color: '#fbbf24', fontFamily: 'monospace', marginTop: '2px' }}>
-                {viewingQrAsset.upiId || `${(viewingQrAsset.symbol || 'stock').toLowerCase().replace(/[^a-z0-9]/g, '')}.paynex@icici`}
+            <div style={{ background: '#090d14', border: '1px solid #1a2233', borderRadius: '8px', padding: '10px 12px', marginBottom: '14px', textAlign: 'center' }}>
+              <div style={{ fontSize: '11px', color: '#8b9bb4' }}>Stock Payment QR Code:</div>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: '#fbbf24', marginTop: '2px' }}>
+                {viewingQrAsset.name} (Min ₹{viewingQrAsset.minStake || 100})
               </div>
             </div>
 
