@@ -900,13 +900,26 @@ export const enrichStockWithPayment = (s, idx = 0) => {
   const groupQrs = getSavedGroupQrs();
   const groupQr = (groupQrs && groupQrs[grp]) ? groupQrs[grp].trim() : '';
   const groupRates = getSavedGroupInterestRates();
-  // Group Interest Rate is 100% authoritative: all companies in the same group have the exact identical rate
-  const rawRate = (groupRates && groupRates[grp] !== undefined && groupRates[grp] !== null)
-    ? Number(groupRates[grp])
-    : (DEFAULT_GROUP_INTEREST[grp] || 5);
-  const effectiveReturn = Math.min(12, Math.max(2, rawRate));
+  let adminSavedPercent = 12;
+  try {
+    const p = localStorage.getItem('paynex_admin_percent');
+    if (p) adminSavedPercent = Number(p) || 12;
+  } catch (_) {}
 
+  // Admin Full Control: Individual Custom/DB Rate > Group Rate > Master Admin Percent
+  const groupRate = (groupRates && groupRates[grp] !== undefined && groupRates[grp] !== null)
+    ? Number(groupRates[grp])
+    : null;
   const custom = getCustomQrOverride(s);
+  const customRate = (custom?.returnPercent !== undefined && custom?.returnPercent !== null)
+    ? Number(custom.returnPercent)
+    : null;
+  const stockRate = (s.returnPercent !== undefined && s.returnPercent !== null && Number(s.returnPercent) > 0)
+    ? Number(s.returnPercent)
+    : null;
+
+  const rawRate = customRate ?? groupRate ?? stockRate ?? adminSavedPercent;
+  const effectiveReturn = Math.min(12, Math.max(2, Number(rawRate)));
   const defaultQr = groupQr || custom?.qrCode || s.qrCode || '';
   const effectiveEnabled = custom?.isEnabled !== undefined ? Boolean(custom.isEnabled) : (s.isEnabled !== false);
 

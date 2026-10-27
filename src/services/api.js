@@ -93,7 +93,7 @@ export const adminApi = {
   updateEngineRate: (profitPercent) =>
     request('/admin/engine/rate', {
       method: 'PUT',
-      body: JSON.stringify({ profitPercent }),
+      body: JSON.stringify({ rate: profitPercent, profitPercent }),
     }),
   distributeDailyInterest: (force = true) =>
     request('/admin/distribute-daily-interest', {

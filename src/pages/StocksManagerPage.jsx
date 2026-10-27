@@ -57,11 +57,25 @@ const mergeCustomQrsWithAssets = (assetList, currentGroupQrs = null, currentGrou
     const custom = saved[key] || saved[symKey] || (item.id ? saved[item.id] : null) || (item._id ? saved[item._id] : null);
     const grp = getStockGroup(item, idx);
     const groupQr = (groupQrs && groupQrs[grp]) ? groupQrs[grp].trim() : '';
-    // Group Interest Rate is 100% authoritative: all companies in the same group share the exact identical rate
-    const rawRate = (groupRates && groupRates[grp] !== undefined && groupRates[grp] !== null)
+    // Admin Full Control: Group Rate (if set by admin) > Individual DB/Custom Rate > Master Staking Engine Rate
+    let adminSavedPercent = 12;
+    try {
+      const p = localStorage.getItem('paynex_admin_percent');
+      if (p) adminSavedPercent = Number(p) || 12;
+    } catch (_) {}
+
+    const groupRate = (groupRates && groupRates[grp] !== undefined && groupRates[grp] !== null)
       ? Number(groupRates[grp])
-      : (DEFAULT_GROUP_INTEREST[grp] || 5);
-    const effectiveRate = Math.min(12, Math.max(2, rawRate));
+      : null;
+    const customRate = (custom?.returnPercent !== undefined && custom?.returnPercent !== null)
+      ? Number(custom.returnPercent)
+      : null;
+    const itemRate = (item.returnPercent !== undefined && item.returnPercent !== null && Number(item.returnPercent) > 0)
+      ? Number(item.returnPercent)
+      : null;
+
+    const rawRate = customRate ?? groupRate ?? itemRate ?? adminSavedPercent;
+    const effectiveRate = Math.min(12, Math.max(2, Number(rawRate)));
     const effectiveQr = groupQr || custom?.qrCode || item.qrCode || '';
 
     if (custom) {
