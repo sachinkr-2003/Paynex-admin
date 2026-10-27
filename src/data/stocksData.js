@@ -900,12 +900,14 @@ export const enrichStockWithPayment = (s, idx = 0) => {
   const groupQrs = getSavedGroupQrs();
   const groupQr = (groupQrs && groupQrs[grp]) ? groupQrs[grp].trim() : '';
   const groupRates = getSavedGroupInterestRates();
-  const groupRate = groupRates && groupRates[grp] ? Number(groupRates[grp]) : null;
+  // Group Interest Rate is 100% authoritative: all companies in the same group have the exact identical rate
+  const rawRate = (groupRates && groupRates[grp] !== undefined && groupRates[grp] !== null)
+    ? Number(groupRates[grp])
+    : (DEFAULT_GROUP_INTEREST[grp] || 5);
+  const effectiveReturn = Math.min(12, Math.max(2, rawRate));
 
   const custom = getCustomQrOverride(s);
   const defaultQr = groupQr || custom?.qrCode || s.qrCode || '';
-  const rawRet = groupRate || Number(custom?.returnPercent ?? s.returnPercent ?? 5);
-  const effectiveReturn = Math.min(12, Math.max(2, Number(rawRet) || 5));
   const effectiveEnabled = custom?.isEnabled !== undefined ? Boolean(custom.isEnabled) : (s.isEnabled !== false);
 
   return {

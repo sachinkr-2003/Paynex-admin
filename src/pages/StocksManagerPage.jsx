@@ -47,20 +47,22 @@ const saveCustomQrToStorage = (assetKey, data) => {
   }
 };
 
-const mergeCustomQrsWithAssets = (assetList) => {
+const mergeCustomQrsWithAssets = (assetList, currentGroupQrs = null, currentGroupRates = null) => {
   const saved = getSavedCustomQrs();
-  const groupQrs = getSavedGroupQrs();
-  const groupRates = getSavedGroupInterestRates();
+  const groupQrs = currentGroupQrs || getSavedGroupQrs();
+  const groupRates = currentGroupRates || getSavedGroupInterestRates();
   return assetList.map((item, idx) => {
     const key = (item.id || item.symbol || '').toUpperCase();
     const symKey = (item.symbol || '').toUpperCase();
     const custom = saved[key] || saved[symKey] || (item.id ? saved[item.id] : null) || (item._id ? saved[item._id] : null);
     const grp = getStockGroup(item, idx);
     const groupQr = (groupQrs && groupQrs[grp]) ? groupQrs[grp].trim() : '';
-    const groupRate = groupRates && groupRates[grp] ? Number(groupRates[grp]) : null;
-
+    // Group Interest Rate is 100% authoritative: all companies in the same group share the exact identical rate
+    const rawRate = (groupRates && groupRates[grp] !== undefined && groupRates[grp] !== null)
+      ? Number(groupRates[grp])
+      : (DEFAULT_GROUP_INTEREST[grp] || 5);
+    const effectiveRate = Math.min(12, Math.max(2, rawRate));
     const effectiveQr = groupQr || custom?.qrCode || item.qrCode || '';
-    const effectiveRate = groupRate || Number(custom?.returnPercent ?? item.returnPercent ?? 5);
 
     if (custom) {
       return {
@@ -113,16 +115,34 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
   const fetchAssets = async () => {
     try {
       const res = await adminApi.getAssets();
-      if (res && res.success && Array.isArray(res.assets) && res.assets.length > 0) {
-        setAssets(mergeCustomQrsWithAssets(res.assets));
-      }
-      if (res && res.groupQrs) {
-        setGroupQrs(res.groupQrs);
+      const freshGroupRates = (res?.groupInterestRates && typeof res.groupInterestRates === 'object')
+        ? { ...DEFAULT_GROUP_INTEREST, ...res.groupInterestRates }
+        : getSavedGroupInterestRates();
+      const freshGroupQrs = (res?.groupQrs && typeof res.groupQrs === 'object')
+        ? res.groupQrs
+        : getSavedGroupQrs();
+
+      if (res && res.groupInterestRates) {
+        setGroupRates(freshGroupRates);
         try {
-          localStorage.setItem('paynex_group_qrs', JSON.stringify(res.groupQrs));
+          localStorage.setItem('paynex_group_interest_rates', JSON.stringify(freshGroupRates));
         } catch (_) {}
       } else {
-        // Fallback: check if settings has groupQrs
+        try {
+          const sRes = await adminApi.getSettings();
+          if (sRes?.settings?.groupInterestRates) {
+            setGroupRates({ ...DEFAULT_GROUP_INTEREST, ...sRes.settings.groupInterestRates });
+            localStorage.setItem('paynex_group_interest_rates', JSON.stringify(sRes.settings.groupInterestRates));
+          }
+        } catch (_) {}
+      }
+
+      if (res && res.groupQrs) {
+        setGroupQrs(freshGroupQrs);
+        try {
+          localStorage.setItem('paynex_group_qrs', JSON.stringify(freshGroupQrs));
+        } catch (_) {}
+      } else {
         try {
           const sRes = await adminApi.getSettings();
           if (sRes?.settings?.groupQrs) {
@@ -131,20 +151,9 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
           }
         } catch (_) {}
       }
-      if (res && res.groupInterestRates) {
-        setGroupRates(res.groupInterestRates);
-        try {
-          localStorage.setItem('paynex_group_interest_rates', JSON.stringify(res.groupInterestRates));
-        } catch (_) {}
-      } else {
-        // Fallback: check if settings has groupInterestRates
-        try {
-          const sRes = await adminApi.getSettings();
-          if (sRes?.settings?.groupInterestRates) {
-            setGroupRates(sRes.settings.groupInterestRates);
-            localStorage.setItem('paynex_group_interest_rates', JSON.stringify(sRes.settings.groupInterestRates));
-          }
-        } catch (_) {}
+
+      if (res && res.success && Array.isArray(res.assets) && res.assets.length > 0) {
+        setAssets(mergeCustomQrsWithAssets(res.assets, freshGroupQrs, freshGroupRates));
       }
     } catch (err) {
       console.warn('Assets fetch notice:', err.message);
