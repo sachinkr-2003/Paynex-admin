@@ -784,6 +784,56 @@ export const FIFTY_STOCKS = [
   },
 ];
 
+// 5 Company Groups Definition (12 Companies each across 60 Assets)
+export const G1 = ['TATAMOTORS', 'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'ITC', 'LT', 'BHARTIARTL', 'HINDUNILVR', 'AXISBANK'];
+export const G2 = ['KOTAKBANK', 'BAJFINANCE', 'MARUTI', 'SUNPHARMA', 'ADANIENT', 'ADANIPORTS', 'TATASTEEL', 'TITAN', 'ASIANPAINT', 'NTPC', 'POWERGRID', 'COALINDIA'];
+export const G3 = ['M&M', 'MM', 'WIPRO', 'ULTRACEMCO', 'BAJAJFINSV', 'ONGC', 'NESTLEIND', 'JSWSTEEL', 'TECHM', 'INDUSINDBK', 'TATACONSUM', 'HINDALCO', 'CIPLA'];
+export const G4 = ['DRREDDY', 'GRASIM', 'SBILIFE', 'HDFCLIFE', 'APOLLOHOSP', 'EICHERMOT', 'DIVISLAB', 'HEROMOTOCO', 'BAJAJ-AUTO', 'BRITANNIA', 'BPCL', 'ZOMATO'];
+export const G5 = ['JIOFIN', 'PAYTM', 'AAPL', 'TSLA', 'NVDA', 'MSFT', 'BTC/USDT', 'BTC', 'ETH/USDT', 'ETH', 'SOL/USDT', 'SOL', 'BNB/USDT', 'BNB', 'GOLD/INR', 'GOLD', 'SILVER/INR', 'SILVER'];
+
+export const GROUP_INFO = {
+  1: { id: 1, name: 'Group 1 (Banking & Bluechips)', short: 'Group 1', color: '#38bdf8', badgeBg: 'rgba(56, 189, 248, 0.15)', badgeBorder: '#38bdf8' },
+  2: { id: 2, name: 'Group 2 (Auto, Energy & Industry)', short: 'Group 2', color: '#10b981', badgeBg: 'rgba(16, 185, 129, 0.15)', badgeBorder: '#10b981' },
+  3: { id: 3, name: 'Group 3 (Metals, FMCG & Tech)', short: 'Group 3', color: '#f59e0b', badgeBg: 'rgba(245, 158, 11, 0.15)', badgeBorder: '#f59e0b' },
+  4: { id: 4, name: 'Group 4 (Pharma, Auto & Retail)', short: 'Group 4', color: '#ec4899', badgeBg: 'rgba(236, 72, 153, 0.15)', badgeBorder: '#ec4899' },
+  5: { id: 5, name: 'Group 5 (Global Tech, Crypto & Gold)', short: 'Group 5', color: '#8b5cf6', badgeBg: 'rgba(139, 92, 246, 0.15)', badgeBorder: '#8b5cf6' },
+};
+
+export const getStockGroup = (stock, index = 0) => {
+  if (stock?.group && Number(stock.group) >= 1 && Number(stock.group) <= 5) {
+    return Number(stock.group);
+  }
+  const sym = (stock?.symbol || stock?.id || '').toUpperCase();
+  if (G1.includes(sym)) return 1;
+  if (G2.includes(sym)) return 2;
+  if (G3.includes(sym)) return 3;
+  if (G4.includes(sym)) return 4;
+  if (G5.includes(sym)) return 5;
+  return Math.min(5, Math.floor(index / 12) + 1);
+};
+
+export const GROUP_QRS_STORAGE_KEY = 'paynex_group_qrs';
+
+export const getSavedGroupQrs = () => {
+  try {
+    const raw = localStorage.getItem(GROUP_QRS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : { 1: '', 2: '', 3: '', 4: '', 5: '' };
+  } catch {
+    return { 1: '', 2: '', 3: '', 4: '', 5: '' };
+  }
+};
+
+export const saveGroupQrToStorage = (group, qrCode) => {
+  try {
+    const current = getSavedGroupQrs();
+    current[group] = (qrCode || '').trim();
+    localStorage.setItem(GROUP_QRS_STORAGE_KEY, JSON.stringify(current));
+    return current;
+  } catch {
+    return null;
+  }
+};
+
 export const getCustomQrOverride = (stock) => {
   try {
     const raw = localStorage.getItem('paynex_custom_stock_qrs');
@@ -799,41 +849,46 @@ export const getCustomQrOverride = (stock) => {
 
 export const getCompanyQrUrl = (stock, amount = null) => {
   const custom = getCustomQrOverride(stock);
-  const effectiveQr = custom?.qrCode || stock?.qrCode;
+  const grp = stock?.group || getStockGroup(stock);
+  const groupQrs = getSavedGroupQrs();
+  const groupQr = groupQrs[grp] || '';
+
+  const effectiveQr = custom?.qrCode || stock?.qrCode || groupQr;
   if (effectiveQr && effectiveQr.trim().length > 0) {
     return effectiveQr;
   }
-  const cleanSym = (stock?.symbol || stock?.id || 'stock').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const upiId = custom?.upiId || stock?.upiId || `${cleanSym}.paynex@icici`;
-  const payee = encodeURIComponent(custom?.payeeName || stock?.payeeName || `${stock?.name || 'Company'} Trading Desk`);
-  const amtParam = amount && Number(amount) > 0 ? `&am=${Number(amount)}` : '';
-  const upiString = `upi://pay?pa=${upiId}&pn=${payee}${amtParam}&cu=INR`;
-  return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiString)}`;
+  const cleanSym = (stock?.symbol || stock?.id || 'STOCK').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const amtParam = amount && Number(amount) > 0 ? `_${Number(amount)}` : '';
+  const qrData = `PAYNEX_DEPOSIT_${cleanSym}${amtParam}`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrData)}`;
 };
 
-export const enrichStockWithPayment = (s) => {
-  const cleanSym = (s.symbol || s.id || 'stock').toLowerCase().replace(/[^a-z0-9]/g, '');
+export const enrichStockWithPayment = (s, idx = 0) => {
+  const grp = s.group ? Number(s.group) : getStockGroup(s, idx);
+  const groupQrs = getSavedGroupQrs();
+  const groupQr = groupQrs[grp] || '';
   const custom = getCustomQrOverride(s);
-  const defaultUpi = custom?.upiId || s.upiId || `${cleanSym}.paynex@icici`;
-  const defaultPayee = custom?.payeeName || s.payeeName || `${s.name} Trading Desk`;
-  const defaultQr = custom?.qrCode !== undefined ? custom.qrCode : (s.qrCode || '');
+  const defaultQr = custom?.qrCode !== undefined ? custom.qrCode : (s.qrCode || groupQr || '');
   const rawRet = Number(custom?.returnPercent ?? s.returnPercent ?? 12);
   const effectiveReturn = Number(rawRet) || 12;
   const effectiveEnabled = custom?.isEnabled !== undefined ? Boolean(custom.isEnabled) : (s.isEnabled !== false);
 
   return {
     ...s,
+    group: grp,
     isEnabled: effectiveEnabled,
     returnPercent: effectiveReturn,
     minStake: 100,
-    upiId: defaultUpi,
-    payeeName: defaultPayee,
+    upiId: custom?.upiId || s.upiId || '',
+    payeeName: custom?.payeeName || s.payeeName || `${s.name} Trading Desk`,
     qrCode: defaultQr,
   };
 };
 
-export const FIFTY_STOCKS_MAP = FIFTY_STOCKS.reduce((acc, stock) => {
-  acc[stock.symbol || stock.id] = enrichStockWithPayment(stock);
+export const FIFTY_STOCKS_MAP = FIFTY_STOCKS.reduce((acc, stock, idx) => {
+  const enriched = enrichStockWithPayment(stock, idx);
+  if (stock.id) acc[stock.id] = enriched;
+  if (stock.symbol) acc[stock.symbol] = enriched;
   return acc;
 }, {});
 

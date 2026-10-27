@@ -131,6 +131,11 @@ export const adminApi = {
       body: JSON.stringify({ ...updates, id, _id: updates?._id }),
     });
   },
+  updateGroupQr: (group, qrCode) =>
+    request('/assets/admin/bulk-group-qr', {
+      method: 'PUT',
+      body: JSON.stringify({ group: Number(group), qrCode }),
+    }),
   deleteAsset: (id) =>
     request(`/assets/admin/${encodeURIComponent(id)}`, {
       method: 'DELETE',

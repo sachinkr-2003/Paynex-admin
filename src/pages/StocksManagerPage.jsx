@@ -8,9 +8,17 @@ import {
   showAdminConfirm,
   showToast as swalToast,
 } from '../utils/swal';
-import { FIFTY_STOCKS, getCompanyQrUrl, enrichStockWithPayment } from '../data/stocksData';
+import {
+  FIFTY_STOCKS,
+  getCompanyQrUrl,
+  enrichStockWithPayment,
+  GROUP_INFO,
+  getStockGroup,
+  getSavedGroupQrs,
+  saveGroupQrToStorage,
+} from '../data/stocksData';
 import AssetIcon from '../components/AssetIcon';
-import { TrendingUp, QrCode, Check, X, Edit, Trash2, Plus, Save, Ban, Upload } from 'lucide-react';
+import { TrendingUp, QrCode, Check, X, Edit, Trash2, Plus, Save, Ban, Upload, Layers } from 'lucide-react';
 
 const QR_STORAGE_KEY = 'paynex_custom_stock_qrs';
 
@@ -39,22 +47,29 @@ const saveCustomQrToStorage = (assetKey, data) => {
 
 const mergeCustomQrsWithAssets = (assetList) => {
   const saved = getSavedCustomQrs();
-  return assetList.map((item) => {
+  const groupQrs = getSavedGroupQrs();
+  return assetList.map((item, idx) => {
     const key = (item.id || item.symbol || '').toUpperCase();
     const symKey = (item.symbol || '').toUpperCase();
     const custom = saved[key] || saved[symKey] || (item.id ? saved[item.id] : null) || (item._id ? saved[item._id] : null);
+    const grp = item.group ? Number(item.group) : getStockGroup(item, idx);
+    const groupQr = groupQrs[grp] || '';
+
     if (custom) {
       return {
         ...item,
+        group: grp,
         isEnabled: custom.isEnabled !== undefined ? Boolean(custom.isEnabled) : (item.isEnabled !== false),
         upiId: custom.upiId !== undefined && custom.upiId.trim() ? custom.upiId : item.upiId,
         payeeName: custom.payeeName !== undefined && custom.payeeName.trim() ? custom.payeeName : item.payeeName,
-        qrCode: custom.qrCode !== undefined ? custom.qrCode : item.qrCode,
+        qrCode: custom.qrCode !== undefined ? custom.qrCode : (item.qrCode || groupQr),
       };
     }
     return {
       ...item,
+      group: grp,
       isEnabled: item.isEnabled !== false,
+      qrCode: item.qrCode || groupQr,
     };
   });
 };
@@ -63,12 +78,16 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
   const [assets, setAssets] = useState(() => mergeCustomQrsWithAssets(FIFTY_STOCKS.map(enrichStockWithPayment)));
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'DISABLED'
+  const [groupFilter, setGroupFilter] = useState('ALL'); // 'ALL' | 1 | 2 | 3 | 4 | 5
+  const [groupQrs, setGroupQrs] = useState(getSavedGroupQrs);
+  const [groupUploading, setGroupUploading] = useState(null);
 
   // Modal State for Add / Edit Asset (Full CRUD)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
+    group: 1,
     minStake: 100, // Min kitna ka le sakte ho
     returnPercent: 5, // Interest rate (strictly 2% to 12%)
     qrCode: '', // Payment QR Image (base64 or URL)
@@ -85,6 +104,12 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
       const res = await adminApi.getAssets();
       if (res && res.success && Array.isArray(res.assets) && res.assets.length > 0) {
         setAssets(mergeCustomQrsWithAssets(res.assets));
+      }
+      if (res && res.groupQrs) {
+        setGroupQrs(res.groupQrs);
+        try {
+          localStorage.setItem('paynex_group_qrs', JSON.stringify(res.groupQrs));
+        } catch (_) {}
       }
     } catch (err) {
       console.warn('Assets fetch notice:', err.message);
@@ -103,6 +128,8 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
   const filteredAssets = assets.filter((item) => {
     if (statusFilter === 'ACTIVE' && item.isEnabled === false) return false;
     if (statusFilter === 'DISABLED' && item.isEnabled !== false) return false;
+    const itemGroup = item.group || getStockGroup(item);
+    if (groupFilter !== 'ALL' && Number(groupFilter) !== itemGroup) return false;
     const q = (searchQuery || '').toLowerCase();
     if (!q) return true;
     return (
@@ -112,12 +139,81 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
     );
   });
 
+  // Handle 1-Click Bulk Group QR Upload
+  const handleGroupQrUpload = async (groupNum, file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showAdminWarning('Invalid File', 'Please select a valid image file (PNG, JPG, WEBP).');
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      showAdminWarning('File Too Large', 'Please upload an image smaller than 3MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (uploadEvent) => {
+      const base64Url = uploadEvent.target?.result;
+      if (!base64Url) return;
+
+      try {
+        setGroupUploading(groupNum);
+        // 1. Save to local storage
+        saveGroupQrToStorage(groupNum, base64Url);
+        // 2. Update local state optimistically
+        setGroupQrs((prev) => ({ ...prev, [groupNum]: base64Url }));
+        setAssets((prev) =>
+          prev.map((a) => {
+            const grp = a.group || getStockGroup(a);
+            if (grp === groupNum) {
+              return { ...a, qrCode: base64Url };
+            }
+            return a;
+          })
+        );
+        // 3. Sync to backend API
+        await adminApi.updateGroupQr(groupNum, base64Url);
+        showAdminSuccess(
+          `Group ${groupNum} QR Updated`,
+          `Payment QR for all companies in Group ${groupNum} has been updated in 1-Click!`
+        );
+        fetchAssets();
+      } catch (err) {
+        showAdminError('Group QR Update Failed', err.message);
+      } finally {
+        setGroupUploading(null);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Remove Group QR
+  const handleRemoveGroupQr = async (groupNum) => {
+    const confirmed = await showAdminConfirm(
+      `Remove Group ${groupNum} QR?`,
+      `Are you sure you want to remove the custom QR for Group ${groupNum}? Companies in this group will revert to their individual default QR.`,
+      'YES, REMOVE',
+      'CANCEL'
+    );
+    if (!confirmed) return;
+
+    try {
+      saveGroupQrToStorage(groupNum, '');
+      setGroupQrs((prev) => ({ ...prev, [groupNum]: '' }));
+      await adminApi.updateGroupQr(groupNum, '');
+      showAdminSuccess(`Group ${groupNum} QR Removed`, `Custom QR for Group ${groupNum} has been cleared.`);
+      fetchAssets();
+    } catch (err) {
+      showAdminError('Remove QR Failed', err.message);
+    }
+  };
 
   // Open modal for Create
   const handleOpenCreate = () => {
     setEditingAsset(null);
     setFormData({
       name: '',
+      group: groupFilter !== 'ALL' ? Number(groupFilter) : 1,
       minStake: 100,
       returnPercent: 5,
       qrCode: '',
@@ -130,9 +226,11 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
   // Open modal for Edit
   const handleOpenEdit = (item) => {
     setEditingAsset(item);
+    const itemGroup = item.group || getStockGroup(item);
     const existingQr = item.qrCode || (item.symbol ? getCompanyQrUrl(item) : '');
     setFormData({
       name: item.name || '',
+      group: itemGroup,
       minStake: Number(item.minStake) || 100,
       returnPercent: Math.min(12, Math.max(2, Number(item.returnPercent) || 5)),
       qrCode: item.qrCode || existingQr || '',
@@ -176,14 +274,16 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
     }
 
     const cleanName = formData.name.trim();
+    const cleanGroup = Number(formData.group) || 1;
     const cleanMinStake = Math.max(100, Number(formData.minStake) || 100);
     const cleanInterest = Math.min(12, Math.max(2, Number(formData.returnPercent) || 5));
     const cleanSym = cleanName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10).toUpperCase() || 'STOCK';
     const targetPayee = formData.payeeName.trim() || `${cleanName} Trading Desk`;
-    const targetUpi = (editingAsset && editingAsset.upiId) ? editingAsset.upiId : `${cleanSym.toLowerCase()}.paynex@icici`;
+    const targetUpi = (editingAsset && editingAsset.upiId) ? editingAsset.upiId : '';
 
     const payload = {
       name: cleanName,
+      group: cleanGroup,
       minStake: cleanMinStake,
       returnPercent: cleanInterest,
       upiId: targetUpi,
@@ -212,7 +312,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
               : a
           )
         );
-        showAdminSuccess('Stock Updated', `"${cleanName}" updated: Min ₹${cleanMinStake}, Return +${cleanInterest}%.`);
+        showAdminSuccess('Stock Updated', `"${cleanName}" (Group ${cleanGroup}) updated: Min ₹${cleanMinStake}, Return +${cleanInterest}%.`);
       } else {
         // Create new stock
         const res = await adminApi.createAsset(payload);
@@ -228,7 +328,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
         saveCustomQrToStorage(key, payload);
 
         setAssets((prev) => [createdAsset, ...prev]);
-        showAdminSuccess('New Stock Created', `"${cleanName}" added successfully with +${cleanInterest}% interest!`);
+        showAdminSuccess('New Stock Created', `"${cleanName}" added to Group ${cleanGroup} with +${cleanInterest}% interest!`);
       }
 
       setIsModalOpen(false);
@@ -421,7 +521,271 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
         </div>
       </div>
 
-      {/* 2. Classic Stocks CRUD Data Grid */}
+      {/* 2. 5-Group QR Code Bulk Manager (1-Click Update for 12 Companies each) */}
+      <div
+        className="square-card"
+        style={{
+          padding: '16px',
+          background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.4))',
+          border: '1.5px solid rgba(245, 158, 11, 0.25)',
+          borderRadius: '10px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 800, color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Layers size={16} color="#f59e0b" /> 5-Group Company QR Manager (1-Click Bulk QR Update)
+            </div>
+            <div style={{ fontSize: '11.5px', color: '#94a3b8', marginTop: '2px' }}>
+              All 60 companies are divided into 5 groups (12 stocks each). Upload a QR here to update all 12 companies in that group at once!
+            </div>
+          </div>
+          <span style={{ fontSize: '11px', color: '#10b981', fontWeight: 700, background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '3px 8px', borderRadius: '4px' }}>
+            ⚡ Live 1-Click Sync to Admin, User Web & Mobile APK
+          </span>
+        </div>
+
+        {/* 5 Cards Grid */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '12px',
+          }}
+        >
+          {[1, 2, 3, 4, 5].map((grpId) => {
+            const info = GROUP_INFO[grpId];
+            const grpQr = groupQrs[grpId];
+            const groupStocks = assets.filter((a) => (a.group || getStockGroup(a)) === grpId);
+            const isSelected = groupFilter === grpId;
+            const isUploading = groupUploading === grpId;
+            const previewUrl = grpQr || (groupStocks[0] ? getCompanyQrUrl(groupStocks[0]) : '');
+
+            return (
+              <div
+                key={grpId}
+                style={{
+                  background: isSelected ? 'rgba(245, 158, 11, 0.08)' : 'rgba(30, 41, 59, 0.5)',
+                  border: isSelected ? `1.5px solid ${info.color}` : '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  position: 'relative',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        color: info.color,
+                        background: info.badgeBg,
+                        border: `1px solid ${info.badgeBorder}`,
+                        padding: '2px 7px',
+                        borderRadius: '4px',
+                        display: 'inline-block',
+                      }}
+                    >
+                      {info.short}
+                    </span>
+                    <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#f1f5f9', marginTop: '4px', lineHeight: '1.2' }}>
+                      {info.name.replace(/Group \d \((.*)\)/, '$1')}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'monospace', fontWeight: 700 }}>
+                    {groupStocks.length} Stocks
+                  </span>
+                </div>
+
+                {/* QR Preview & Status */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0' }}>
+                  <div
+                    onClick={() => {
+                      if (previewUrl) {
+                        setViewingQrAsset({
+                          name: info.name,
+                          symbol: info.short,
+                          qrCode: previewUrl,
+                        });
+                      }
+                    }}
+                    style={{
+                      width: '64px',
+                      height: '64px',
+                      background: '#fff',
+                      borderRadius: '6px',
+                      padding: '3px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                      border: grpQr ? '1.5px solid #10b981' : '1px solid #cbd5e1',
+                      flexShrink: 0,
+                    }}
+                    title="Click to view QR"
+                  >
+                    {previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt={`Group ${grpId} QR`}
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                      />
+                    ) : (
+                      <QrCode size={28} color="#94a3b8" />
+                    )}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '10.5px', fontWeight: 700, color: grpQr ? '#10b981' : '#cbd5e1', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Check size={11} color={grpQr ? '#10b981' : '#38bdf8'} />
+                      {grpQr ? 'Custom QR Set' : 'Default QR'}
+                    </div>
+                    <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px', lineHeight: '1.2' }}>
+                      {grpQr ? 'Applied to all 12 stocks' : '1-click to override all 12'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: '6px', marginTop: 'auto' }}>
+                  <label
+                    style={{
+                      flex: 1,
+                      height: '28px',
+                      background: 'rgba(245, 158, 11, 0.15)',
+                      border: '1px solid rgba(245, 158, 11, 0.35)',
+                      borderRadius: '4px',
+                      color: '#fbbf24',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
+                      cursor: isUploading ? 'wait' : 'pointer',
+                    }}
+                  >
+                    <Upload size={11} /> {isUploading ? 'Saving...' : 'Upload QR'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploading}
+                      style={{ display: 'none' }}
+                      onChange={(e) => handleGroupQrUpload(grpId, e.target.files?.[0])}
+                    />
+                  </label>
+
+                  {grpQr && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveGroupQr(grpId)}
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        border: '1px solid rgba(239, 68, 68, 0.35)',
+                        borderRadius: '4px',
+                        color: '#f87171',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      title="Remove custom group QR"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setGroupFilter(groupFilter === grpId ? 'ALL' : grpId)}
+                    style={{
+                      padding: '0 8px',
+                      height: '28px',
+                      background: isSelected ? info.color : 'rgba(255, 255, 255, 0.05)',
+                      border: `1px solid ${isSelected ? info.color : 'rgba(255, 255, 255, 0.1)'}`,
+                      borderRadius: '4px',
+                      color: isSelected ? '#000' : '#cbd5e1',
+                      fontSize: '10.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                    title={`Filter table to Group ${grpId}`}
+                  >
+                    {isSelected ? 'Filtered' : 'Filter'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 3. Group Filter Tabs Navigation Bar */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center',
+          overflowX: 'auto',
+          padding: '4px 0',
+        }}
+      >
+        <span style={{ fontSize: '12px', fontWeight: 700, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+          <Layers size={13} /> Group Filter:
+        </span>
+        <button
+          type="button"
+          onClick={() => setGroupFilter('ALL')}
+          style={{
+            padding: '5px 12px',
+            borderRadius: '6px',
+            border: groupFilter === 'ALL' ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.12)',
+            background: groupFilter === 'ALL' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255,255,255,0.03)',
+            color: groupFilter === 'ALL' ? '#f59e0b' : '#cbd5e1',
+            fontSize: '11.5px',
+            fontWeight: 800,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          All ({assets.length})
+        </button>
+        {[1, 2, 3, 4, 5].map((g) => {
+          const info = GROUP_INFO[g];
+          const count = assets.filter((a) => (a.group || getStockGroup(a)) === g).length;
+          const isSel = groupFilter === g;
+          return (
+            <button
+              key={g}
+              type="button"
+              onClick={() => setGroupFilter(g)}
+              style={{
+                padding: '5px 12px',
+                borderRadius: '6px',
+                border: isSel ? `1px solid ${info.color}` : '1px solid rgba(255,255,255,0.12)',
+                background: isSel ? info.badgeBg : 'rgba(255,255,255,0.03)',
+                color: isSel ? info.color : '#cbd5e1',
+                fontSize: '11.5px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {info.short} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 4. Classic Stocks CRUD Data Grid */}
       <div className="square-card" style={{ padding: '0', overflow: 'hidden' }}>
         <div className="excel-table-container">
           <table className="square-table">
@@ -429,6 +793,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
               <tr>
                 <th style={{ width: '40px' }}>#</th>
                 <th>Stock Name</th>
+                <th>Group</th>
                 <th>Min Buy Amount (INR)</th>
                 <th>Daily Interest Return</th>
                 <th>Payment QR Code</th>
@@ -439,8 +804,8 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
             <tbody>
               {filteredAssets.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ padding: '36px 14px', textAlign: 'center', color: '#8b9bb4', fontSize: '13px' }}>
-                    No stocks found. Click <strong>"+ Add New Stock"</strong> to create one!
+                  <td colSpan="8" style={{ padding: '36px 14px', textAlign: 'center', color: '#8b9bb4', fontSize: '13px' }}>
+                    No stocks found for selected group. Click <strong>"+ Add New Stock"</strong> to create one!
                   </td>
                 </tr>
               ) : (
@@ -482,6 +847,31 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                             </div>
                           </div>
                         </div>
+                      </td>
+
+                      {/* Group Badge */}
+                      <td>
+                        {(() => {
+                          const grp = item.group || getStockGroup(item, index);
+                          const grpInfo = GROUP_INFO[grp] || GROUP_INFO[1];
+                          return (
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 800,
+                                color: grpInfo.color,
+                                background: grpInfo.badgeBg,
+                                border: `1px solid ${grpInfo.badgeBorder}`,
+                                padding: '3px 8px',
+                                borderRadius: '4px',
+                                display: 'inline-block',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {grpInfo.short}
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       {/* 2. Min Kitna Ka Le Sakte Ho */}
@@ -736,11 +1126,46 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 />
               </div>
 
-              {/* FIELD 2: Min Kitna Ka Le Sakte Ho */}
+              {/* FIELD 2: Stock Group (1 to 5) */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <label style={{ fontSize: '12px', fontWeight: 700, color: '#cbd5e1' }}>
-                    2. Minimum Buy Amount (₹) *
+                    2. Company Group (Group 1 – 5) *
+                  </label>
+                  <span style={{ fontSize: '11px', color: GROUP_INFO[formData.group || 1]?.color || '#f59e0b', fontWeight: 700 }}>
+                    {GROUP_INFO[formData.group || 1]?.short}
+                  </span>
+                </div>
+                <select
+                  value={formData.group || 1}
+                  onChange={(e) => setFormData({ ...formData, group: Number(e.target.value) })}
+                  className="square-input"
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    fontSize: '13px',
+                    boxSizing: 'border-box',
+                    background: '#1e293b',
+                    color: '#f1f5f9',
+                    borderRadius: '6px',
+                  }}
+                >
+                  {Object.entries(GROUP_INFO).map(([grpId, info]) => (
+                    <option key={grpId} value={grpId}>
+                      {info.name}
+                    </option>
+                  ))}
+                </select>
+                <div style={{ fontSize: '10.5px', color: '#8b9bb4', marginTop: '4px' }}>
+                  ⚡ Auto-inherits Group {formData.group || 1} QR code if no custom QR is uploaded below.
+                </div>
+              </div>
+
+              {/* FIELD 3: Min Kitna Ka Le Sakte Ho */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#cbd5e1' }}>
+                    3. Minimum Buy Amount (₹) *
                   </label>
                   <span style={{ fontSize: '11px', color: '#fbbf24', fontWeight: 700 }}>
                     User can buy from ₹{formData.minStake}
@@ -780,7 +1205,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 </div>
               </div>
 
-              {/* FIELD 3: Interest Set Karne Ka Option (2% to 12%) */}
+              {/* FIELD 4: Interest Set Karne Ka Option (2% to 12%) */}
               <div
                 style={{
                   background: 'rgba(16, 185, 129, 0.08)',
@@ -791,7 +1216,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <label style={{ fontSize: '12px', fontWeight: 700, color: '#34d399' }}>
-                    3. Fixed Interest Rate (Profit %) *
+                    4. Fixed Interest Rate (Profit %) *
                   </label>
                   <span
                     style={{
@@ -840,7 +1265,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 </div>
               </div>
 
-              {/* FIELD 4: QR Set Karne Ka Option */}
+              {/* FIELD 5: QR Set Karne Ka Option */}
               <div
                 style={{
                   background: 'rgba(245, 158, 11, 0.06)',
@@ -851,11 +1276,15 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <label style={{ fontSize: '12px', fontWeight: 700, color: '#fbbf24', display: 'block', margin: 0 }}>
-                    4. Stock Payment QR Setup *
+                    5. Stock Payment QR Setup (Optional Custom QR)
                   </label>
-                  {formData.qrCode && (
+                  {formData.qrCode ? (
                     <span style={{ fontSize: '11px', color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <Check size={12} /> QR Image Added
+                      <Check size={12} /> Custom QR Added
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      Using Group {formData.group || 1} QR
                     </span>
                   )}
                 </div>
@@ -953,7 +1382,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
               >
                 <div>
                   <div style={{ fontSize: '12px', fontWeight: 700, color: '#f1f5f9' }}>
-                    5. Stock Availability Status
+                    6. Stock Availability Status
                   </div>
                   <div style={{ fontSize: '11px', color: formData.isEnabled ? '#10b981' : '#f87171', fontWeight: 600, marginTop: '2px' }}>
                     {formData.isEnabled ? 'ENABLED (Visible & tradable by users)' : 'DISABLED (Hidden from users in portal & APK)'}
