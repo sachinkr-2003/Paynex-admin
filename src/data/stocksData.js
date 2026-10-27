@@ -800,15 +800,15 @@ export const GROUP_INFO = {
 };
 
 export const getStockGroup = (stock, index = 0) => {
-  if (stock?.group && Number(stock.group) >= 1 && Number(stock.group) <= 5) {
-    return Number(stock.group);
-  }
   const sym = (stock?.symbol || stock?.id || '').toUpperCase();
   if (G1.includes(sym)) return 1;
   if (G2.includes(sym)) return 2;
   if (G3.includes(sym)) return 3;
   if (G4.includes(sym)) return 4;
   if (G5.includes(sym)) return 5;
+  if (stock?.group && Number(stock.group) >= 1 && Number(stock.group) <= 5) {
+    return Number(stock.group);
+  }
   return Math.min(5, Math.floor(index / 12) + 1);
 };
 
@@ -848,15 +848,23 @@ export const getCustomQrOverride = (stock) => {
 };
 
 export const getCompanyQrUrl = (stock, amount = null) => {
-  const custom = getCustomQrOverride(stock);
-  const grp = stock?.group || getStockGroup(stock);
+  const grp = getStockGroup(stock);
   const groupQrs = getSavedGroupQrs();
-  const groupQr = groupQrs[grp] || '';
+  const groupQr = (groupQrs && groupQrs[grp]) ? groupQrs[grp].trim() : '';
 
-  const effectiveQr = custom?.qrCode || stock?.qrCode || groupQr;
-  if (effectiveQr && effectiveQr.trim().length > 0) {
+  // 1. Group QR is authoritative: 1 group ka 1 qr sabhi companies me lag jaye!
+  if (groupQr && groupQr.length > 0) {
+    return groupQr;
+  }
+
+  // 2. Custom or individual stock QR override
+  const custom = getCustomQrOverride(stock);
+  const effectiveQr = (custom?.qrCode && custom.qrCode.trim()) || (stock?.qrCode && stock.qrCode.trim());
+  if (effectiveQr && effectiveQr.length > 0) {
     return effectiveQr;
   }
+
+  // 3. Fallback to clean QR generator
   const cleanSym = (stock?.symbol || stock?.id || 'STOCK').toUpperCase().replace(/[^A-Z0-9]/g, '');
   const amtParam = amount && Number(amount) > 0 ? `_${Number(amount)}` : '';
   const qrData = `PAYNEX_DEPOSIT_${cleanSym}${amtParam}`;
@@ -864,11 +872,11 @@ export const getCompanyQrUrl = (stock, amount = null) => {
 };
 
 export const enrichStockWithPayment = (s, idx = 0) => {
-  const grp = s.group ? Number(s.group) : getStockGroup(s, idx);
+  const grp = getStockGroup(s, idx);
   const groupQrs = getSavedGroupQrs();
-  const groupQr = groupQrs[grp] || '';
+  const groupQr = (groupQrs && groupQrs[grp]) ? groupQrs[grp].trim() : '';
   const custom = getCustomQrOverride(s);
-  const defaultQr = custom?.qrCode !== undefined ? custom.qrCode : (s.qrCode || groupQr || '');
+  const defaultQr = groupQr || custom?.qrCode || s.qrCode || '';
   const rawRet = Number(custom?.returnPercent ?? s.returnPercent ?? 12);
   const effectiveReturn = Number(rawRet) || 12;
   const effectiveEnabled = custom?.isEnabled !== undefined ? Boolean(custom.isEnabled) : (s.isEnabled !== false);

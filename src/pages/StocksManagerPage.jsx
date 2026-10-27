@@ -52,8 +52,10 @@ const mergeCustomQrsWithAssets = (assetList) => {
     const key = (item.id || item.symbol || '').toUpperCase();
     const symKey = (item.symbol || '').toUpperCase();
     const custom = saved[key] || saved[symKey] || (item.id ? saved[item.id] : null) || (item._id ? saved[item._id] : null);
-    const grp = item.group ? Number(item.group) : getStockGroup(item, idx);
-    const groupQr = groupQrs[grp] || '';
+    const grp = getStockGroup(item, idx);
+    const groupQr = (groupQrs && groupQrs[grp]) ? groupQrs[grp].trim() : '';
+
+    const effectiveQr = groupQr || custom?.qrCode || item.qrCode || '';
 
     if (custom) {
       return {
@@ -62,14 +64,14 @@ const mergeCustomQrsWithAssets = (assetList) => {
         isEnabled: custom.isEnabled !== undefined ? Boolean(custom.isEnabled) : (item.isEnabled !== false),
         upiId: custom.upiId !== undefined && custom.upiId.trim() ? custom.upiId : item.upiId,
         payeeName: custom.payeeName !== undefined && custom.payeeName.trim() ? custom.payeeName : item.payeeName,
-        qrCode: custom.qrCode !== undefined ? custom.qrCode : (item.qrCode || groupQr),
+        qrCode: effectiveQr,
       };
     }
     return {
       ...item,
       group: grp,
       isEnabled: item.isEnabled !== false,
-      qrCode: item.qrCode || groupQr,
+      qrCode: effectiveQr,
     };
   });
 };
@@ -160,11 +162,26 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
         setGroupUploading(groupNum);
         // 1. Save to local storage
         saveGroupQrToStorage(groupNum, base64Url);
+        // Synchronize individual custom QR storage for this group so no conflicting override lingers
+        try {
+          const customQrs = getSavedCustomQrs();
+          assets.forEach((a) => {
+            const grp = getStockGroup(a);
+            if (grp === groupNum) {
+              const k1 = (a.id || '').toUpperCase();
+              const k2 = (a.symbol || '').toUpperCase();
+              if (k1 && customQrs[k1]) customQrs[k1].qrCode = base64Url;
+              if (k2 && customQrs[k2]) customQrs[k2].qrCode = base64Url;
+            }
+          });
+          localStorage.setItem(QR_STORAGE_KEY, JSON.stringify(customQrs));
+        } catch (_) {}
+
         // 2. Update local state optimistically
         setGroupQrs((prev) => ({ ...prev, [groupNum]: base64Url }));
         setAssets((prev) =>
           prev.map((a) => {
-            const grp = a.group || getStockGroup(a);
+            const grp = getStockGroup(a);
             if (grp === groupNum) {
               return { ...a, qrCode: base64Url };
             }
