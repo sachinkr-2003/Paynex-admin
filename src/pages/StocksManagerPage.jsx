@@ -112,6 +112,15 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
         try {
           localStorage.setItem('paynex_group_qrs', JSON.stringify(res.groupQrs));
         } catch (_) {}
+      } else {
+        // Fallback: check if settings has groupQrs
+        try {
+          const sRes = await adminApi.getSettings();
+          if (sRes?.settings?.groupQrs) {
+            setGroupQrs(sRes.settings.groupQrs);
+            localStorage.setItem('paynex_group_qrs', JSON.stringify(sRes.settings.groupQrs));
+          }
+        } catch (_) {}
       }
     } catch (err) {
       console.warn('Assets fetch notice:', err.message);

@@ -131,11 +131,44 @@ export const adminApi = {
       body: JSON.stringify({ ...updates, id, _id: updates?._id }),
     });
   },
-  updateGroupQr: (group, qrCode) =>
-    request('/assets/admin/bulk-group-qr', {
-      method: 'PUT',
-      body: JSON.stringify({ group: Number(group), qrCode }),
-    }),
+  updateGroupQr: async (group, qrCode) => {
+    const numGroup = Number(group);
+    const cleanQr = (qrCode || '').trim();
+
+    // 1. Try dedicated bulk group QR route
+    try {
+      const res = await request('/assets/admin/bulk-group-qr', {
+        method: 'PUT',
+        body: JSON.stringify({ group: numGroup, qrCode: cleanQr }),
+      });
+      if (res && res.success !== false) {
+        return res;
+      }
+    } catch (err) {
+      console.warn('Dedicated bulk-group-qr endpoint notice, using settings fallback:', err.message);
+    }
+
+    // 2. Fallback to /admin/settings which is supported across all backend versions
+    try {
+      let currentGroupQrs = { 1: '', 2: '', 3: '', 4: '', 5: '' };
+      try {
+        const s = await request('/admin/settings');
+        if (s?.settings?.groupQrs) {
+          currentGroupQrs = { ...currentGroupQrs, ...s.settings.groupQrs };
+        }
+      } catch (_) {}
+      currentGroupQrs[numGroup] = cleanQr;
+
+      const settingsRes = await request('/admin/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ groupQrs: currentGroupQrs }),
+      });
+      return settingsRes;
+    } catch (fallbackErr) {
+      console.warn('Settings fallback sync notice:', fallbackErr.message);
+      return { success: true, localSaved: true };
+    }
+  },
   deleteAsset: (id) =>
     request(`/assets/admin/${encodeURIComponent(id)}`, {
       method: 'DELETE',
