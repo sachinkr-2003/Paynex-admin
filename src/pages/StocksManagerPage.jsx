@@ -115,7 +115,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
   const [formData, setFormData] = useState({
     name: '',
     group: 1,
-    minStake: 100, // Min kitna ka le sakte ho
+    minStake: 1000, // Min kitna ka le sakte ho (strictly ₹1,000 min)
     returnPercent: 5, // Interest rate (strictly 2% to 12%)
     qrCode: '', // Payment QR Image (base64 or URL)
     payeeName: '',
@@ -335,7 +335,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
     setFormData({
       name: '',
       group: groupFilter !== 'ALL' ? Number(groupFilter) : 1,
-      minStake: 100,
+      minStake: 1000,
       returnPercent: 5,
       qrCode: '',
       payeeName: '',
@@ -352,7 +352,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
     setFormData({
       name: item.name || '',
       group: itemGroup,
-      minStake: Number(item.minStake) || 100,
+      minStake: Math.max(1000, Number(item.minStake) || 1000),
       returnPercent: Math.min(12, Math.max(2, Number(item.returnPercent) || 5)),
       qrCode: item.qrCode || existingQr || '',
       payeeName: item.payeeName || `${item.name} Desk`,
@@ -396,7 +396,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
 
     const cleanName = formData.name.trim();
     const cleanGroup = Number(formData.group) || 1;
-    const cleanMinStake = Math.max(100, Number(formData.minStake) || 100);
+    const cleanMinStake = Math.max(1000, Number(formData.minStake) || 1000);
     const cleanInterest = Math.min(12, Math.max(2, Number(formData.returnPercent) || 5));
     const cleanSym = cleanName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10).toUpperCase() || 'STOCK';
     const targetPayee = formData.payeeName.trim() || `${cleanName} Trading Desk`;
@@ -526,7 +526,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
   const handleExportExcel = () => {
     const headers = [
       { label: 'Stock Name', accessor: 'name' },
-      { label: 'Min Buy Amount (INR)', accessor: (a) => `₹${a.minStake || 100}` },
+      { label: 'Min Buy Amount (INR)', accessor: (a) => `₹${Math.max(1000, Number(a.minStake) || 1000)}` },
       { label: 'Interest Rate (%)', accessor: (a) => `+${a.returnPercent}%` },
       { label: 'Payment QR', accessor: (a) => a.qrCode ? 'Custom QR' : 'Active QR' },
       { label: 'Payee Name', accessor: (a) => a.payeeName || 'N/A' },
@@ -1071,7 +1071,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                             border: '1px solid rgba(245, 158, 11, 0.3)',
                           }}
                         >
-                          ₹{Number(item.minStake || 100).toLocaleString('en-IN')}
+                          ₹{Math.max(1000, Number(item.minStake) || 1000).toLocaleString('en-IN')}
                         </span>
                       </td>
 
@@ -1357,16 +1357,16 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 <input
                   type="number"
                   required
-                  min="100"
-                  step="50"
-                  placeholder="100"
+                  min="1000"
+                  step="500"
+                  placeholder="1000"
                   value={formData.minStake}
                   onChange={(e) => setFormData({ ...formData, minStake: Number(e.target.value) })}
                   className="square-input"
                   style={{ width: '100%', height: '38px', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, boxSizing: 'border-box' }}
                 />
                 <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
-                  {[100, 500, 1000, 2000, 5000].map((amt) => (
+                  {[1000, 2000, 5000, 10000, 25000].map((amt) => (
                     <button
                       key={amt}
                       type="button"

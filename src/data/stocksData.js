@@ -928,7 +928,7 @@ export const enrichStockWithPayment = (s, idx = 0) => {
     group: grp,
     isEnabled: effectiveEnabled,
     returnPercent: effectiveReturn,
-    minStake: 100,
+    minStake: Math.max(1000, Number(s.minStake) || 1000),
     upiId: custom?.upiId || s.upiId || '',
     payeeName: custom?.payeeName || s.payeeName || `${s.name} Trading Desk`,
     qrCode: defaultQr,
