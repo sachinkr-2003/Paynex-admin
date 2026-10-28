@@ -110,9 +110,8 @@ export default function DashboardOverview({
       {
         label: 'Profit (INR)',
         accessor: (r) => {
-          const s = Number(r.stakedAmount) || 0;
-          const ret = Number(r.returnPercent) || 0;
-          const p = Number(r.profit) > 0 ? Number(r.profit) : Math.round((s * ret) / 100);
+          const earned = Number(r.totalInterestEarned || 0);
+          const p = r.status === 'Active' ? earned : (Number(r.profit) || earned);
           return `₹${p.toLocaleString('en-IN')}`;
         },
       },
@@ -120,10 +119,9 @@ export default function DashboardOverview({
         label: 'Total Payout (INR)',
         accessor: (r) => {
           const s = Number(r.stakedAmount) || 0;
-          const ret = Number(r.returnPercent) || 0;
-          const p = Number(r.profit) > 0 ? Number(r.profit) : Math.round((s * ret) / 100);
-          const py = Number(r.payout) > s ? Number(r.payout) : (s + p);
-          return `₹${py.toLocaleString('en-IN')}`;
+          const earned = Number(r.totalInterestEarned || 0);
+          const p = r.status === 'Active' ? earned : (Number(r.profit) || earned);
+          return `₹${(s + p).toLocaleString('en-IN')}`;
         },
       },
       { label: 'Status', accessor: 'status' },
@@ -650,10 +648,11 @@ export default function DashboardOverview({
               {gameRounds.slice(0, 15).map((round) => {
                 const stakedAmt = Number(round.stakedAmount) || 0;
                 const retPct = Number(round.returnPercent) || 0;
-                const rawProfit = Number(round.profit) || 0;
-                const profitAmt = rawProfit > 0 ? rawProfit : Math.round((stakedAmt * retPct) / 100);
-                const rawPayout = Number(round.payout) || 0;
-                const payoutAmt = rawPayout > stakedAmt ? rawPayout : (stakedAmt + profitAmt);
+                const earned = Number(round.totalInterestEarned || 0);
+                const dailyReturn = round.dailyInterest || Math.max(1, Math.round((stakedAmt * retPct) / 100));
+                // Profit is strictly 0 before 5:00 AM distribution! Shows earned interest after 5:00 AM
+                const profitAmt = round.status === 'Active' ? earned : (Number(round.profit) || earned);
+                const payoutAmt = stakedAmt + profitAmt;
                 const roundId = round.id || (round._id ? `RND-${String(round._id).slice(-5)}` : 'RND');
                 return (
                   <tr key={round.id || round._id || Math.random()}>
@@ -674,8 +673,13 @@ export default function DashboardOverview({
                         +{retPct}%
                       </span>
                     </td>
-                    <td style={{ fontFamily: 'monospace', fontWeight: 600, color: '#10b981' }}>
-                      +₹{profitAmt.toLocaleString('en-IN')}
+                    <td style={{ fontFamily: 'monospace', fontWeight: 600, color: profitAmt > 0 ? '#10b981' : '#8b9bb4' }}>
+                      <div>+₹{profitAmt.toLocaleString('en-IN')}</div>
+                      {round.status === 'Active' && profitAmt === 0 && (
+                        <div style={{ fontSize: '9.5px', color: '#f59e0b', marginTop: '1px' }}>
+                          5:00 AM: +₹{dailyReturn}
+                        </div>
+                      )}
                     </td>
                     <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#f59e0b' }}>
                       ₹{payoutAmt.toLocaleString('en-IN')}
