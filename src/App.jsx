@@ -33,7 +33,64 @@ export default function App() {
     }
   });
 
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const VALID_TABS = [
+    'dashboard',
+    'stocks_manager',
+    'deposits',
+    'withdrawals',
+    'users',
+    'support_chat',
+    'settings',
+    'engine',
+    'plans',
+  ];
+
+  const getInitialTab = () => {
+    try {
+      const hash = window.location.hash.replace('#', '').trim();
+      if (hash && VALID_TABS.includes(hash)) {
+        return hash;
+      }
+      const savedTab = localStorage.getItem('paynex_admin_active_tab');
+      if (savedTab && VALID_TABS.includes(savedTab)) {
+        return savedTab;
+      }
+    } catch {}
+    return 'dashboard';
+  };
+
+  const [activeTab, setActiveTabState] = useState(getInitialTab);
+
+  const setActiveTab = (tab) => {
+    setActiveTabState(tab);
+    try {
+      localStorage.setItem('paynex_admin_active_tab', tab);
+      if (window.location.hash !== `#${tab}`) {
+        window.history.replaceState(null, '', `#${tab}`);
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    try {
+      if (!window.location.hash || window.location.hash === '#') {
+        window.history.replaceState(null, '', `#${activeTab}`);
+      }
+    } catch {}
+
+    const handleHashChange = () => {
+      try {
+        const hash = window.location.hash.replace('#', '').trim();
+        if (hash && VALID_TABS.includes(hash)) {
+          setActiveTabState(hash);
+          localStorage.setItem('paynex_admin_active_tab', hash);
+        }
+      } catch {}
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [activeTab]);
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -240,6 +297,7 @@ export default function App() {
         {/* Strict Square Top Bar */}
         <Header
           activeTab={activeTab}
+          setActiveTab={setActiveTab}
           onExportAllAudit={handleExportAllAudit}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}

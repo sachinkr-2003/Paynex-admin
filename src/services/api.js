@@ -44,6 +44,9 @@ export const adminApi = {
   // Dashboard KPIs
   getDashboardKPIs: () => request('/admin/dashboard-kpis'),
 
+  // Real-time System Notifications & Alerts
+  getNotifications: () => request('/admin/notifications'),
+
   // Traders / Users
   getTraders: (params = '') => request(`/admin/users${params ? `?${params}` : ''}`),
   adjustTraderBalance: (userId, amount, type, note) =>

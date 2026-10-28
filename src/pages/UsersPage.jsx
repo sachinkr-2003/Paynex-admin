@@ -259,13 +259,18 @@ export default function UsersPage({ traders, setTraders, showToast, searchQuery 
                     {u.phone}
                   </td>
                   <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#10b981' }}>
-                    ₹{u.balance.toLocaleString('en-IN')}
+                    ₹{Number(u.balance || 0).toLocaleString('en-IN')}
                   </td>
                   <td style={{ fontFamily: 'monospace', color: '#f1f5f9' }}>
-                    ₹{u.totalStaked.toLocaleString('en-IN')}
+                    <div style={{ fontWeight: 600 }}>₹{Number(u.totalStaked || 0).toLocaleString('en-IN')}</div>
+                    {Number(u.inContractAmount || 0) > 0 && (
+                      <div style={{ fontSize: '10px', color: '#f59e0b', marginTop: '2px', fontWeight: 600 }}>
+                        ● In Contract: ₹{Number(u.inContractAmount).toLocaleString('en-IN')}
+                      </div>
+                    )}
                   </td>
                   <td style={{ fontFamily: 'monospace', fontWeight: 600, color: '#f59e0b' }}>
-                    ₹{u.totalWon.toLocaleString('en-IN')}
+                    ₹{Number(u.totalWon || 0).toLocaleString('en-IN')}
                   </td>
                   <td>
                     <span
