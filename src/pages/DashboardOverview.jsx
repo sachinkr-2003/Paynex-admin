@@ -65,11 +65,11 @@ export default function DashboardOverview({
     )
     .reduce((sum, r) => sum + (Number(r.payout) || 0), 0);
 
-  // 5. Total User Capital Invested (Inflow: strictly approved deposits, not double-counting stakes)
+  // 5. Total User Capital Invested (Inflow: deposits & active user investments)
   const totalUserInvested =
     kpis?.totalUserInvested !== undefined
       ? Number(kpis.totalUserInvested)
-      : approvedDepositsAmount;
+      : Math.max(approvedDepositsAmount, totalStakesAmount);
 
   // 6. Total Money Paid Out to Users (Outflow: real bank / UPI disbursements)
   const totalPaidOut =
@@ -251,7 +251,7 @@ export default function DashboardOverview({
                 color: '#8b9bb4',
               }}
             >
-              <span>Approved Deposits: <strong style={{ color: '#10b981' }}>₹{approvedDepositsAmount.toLocaleString('en-IN')}</strong></span>
+              <span>Approved Deposits: <strong style={{ color: '#10b981' }}>₹{approvedDepositsAmount.toLocaleString('en-IN')}</strong> {totalStakesAmount > 0 && <span style={{ color: '#64748b' }}>• Stakes: <strong style={{ color: '#fbbf24' }}>₹{totalStakesAmount.toLocaleString('en-IN')}</strong></span>}</span>
               <span>Share: <strong style={{ color: '#ffffff' }}>{inflowPercent}%</strong></span>
             </div>
           </div>

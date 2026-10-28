@@ -78,11 +78,17 @@ const mergeCustomQrsWithAssets = (assetList, currentGroupQrs = null, currentGrou
     const effectiveRate = Math.min(12, Math.max(2, Number(rawRate)));
     const effectiveQr = groupQr || custom?.qrCode || item.qrCode || '';
 
+    // AUTHORITATIVE STATUS: Database item.isEnabled ALWAYS overrides localStorage!
+    // A stock is active unless explicitly set to false in the database.
+    const resolvedEnabled = (item.isEnabled !== undefined && item.isEnabled !== null)
+      ? (item.isEnabled !== false)
+      : (custom?.isEnabled !== undefined ? Boolean(custom.isEnabled) : true);
+
     if (custom) {
       return {
         ...item,
         group: grp,
-        isEnabled: custom.isEnabled !== undefined ? Boolean(custom.isEnabled) : (item.isEnabled !== false),
+        isEnabled: resolvedEnabled,
         upiId: custom.upiId !== undefined && custom.upiId.trim() ? custom.upiId : item.upiId,
         payeeName: custom.payeeName !== undefined && custom.payeeName.trim() ? custom.payeeName : item.payeeName,
         qrCode: effectiveQr,
@@ -92,7 +98,7 @@ const mergeCustomQrsWithAssets = (assetList, currentGroupQrs = null, currentGrou
     return {
       ...item,
       group: grp,
-      isEnabled: item.isEnabled !== false,
+      isEnabled: resolvedEnabled,
       qrCode: effectiveQr,
       returnPercent: effectiveRate,
     };
@@ -465,13 +471,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
     const nextStatus = !currentEnabled;
     const key = (item.id || item.symbol || '').toUpperCase();
 
-    // 1. Persist to localStorage for instant client-side sync across tabs
-    saveCustomQrToStorage(key, { isEnabled: nextStatus });
-    if (item.symbol) saveCustomQrToStorage(item.symbol.toUpperCase(), { isEnabled: nextStatus });
-    if (item.id) saveCustomQrToStorage(item.id.toUpperCase(), { isEnabled: nextStatus });
-    if (item._id) saveCustomQrToStorage(item._id, { isEnabled: nextStatus });
-
-    // 2. Optimistic UI update
+    // 1. Optimistic UI update
     setAssets((prev) =>
       prev.map((a) =>
         (a.id === item.id || a._id === item._id || (a.symbol && a.symbol === item.symbol))
@@ -479,6 +479,12 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
           : a
       )
     );
+
+    // 2. Persist to localStorage for instant client-side sync across tabs
+    saveCustomQrToStorage(key, { isEnabled: nextStatus });
+    if (item.symbol) saveCustomQrToStorage(item.symbol.toUpperCase(), { isEnabled: nextStatus });
+    if (item.id) saveCustomQrToStorage(item.id.toUpperCase(), { isEnabled: nextStatus });
+    if (item._id) saveCustomQrToStorage(item._id, { isEnabled: nextStatus });
 
     // 3. Sync to backend API via dedicated toggle status endpoint
     try {
@@ -491,7 +497,12 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
       fetchAssets();
     } catch (err) {
       console.error('Backend toggle status sync error:', err.message);
-      // Revert optimistic update on failure
+      // Revert optimistic update on failure AND revert localStorage!
+      saveCustomQrToStorage(key, { isEnabled: currentEnabled });
+      if (item.symbol) saveCustomQrToStorage(item.symbol.toUpperCase(), { isEnabled: currentEnabled });
+      if (item.id) saveCustomQrToStorage(item.id.toUpperCase(), { isEnabled: currentEnabled });
+      if (item._id) saveCustomQrToStorage(item._id, { isEnabled: currentEnabled });
+
       setAssets((prev) =>
         prev.map((a) =>
           (a.id === item.id || a._id === item._id || (a.symbol && a.symbol === item.symbol))
@@ -500,6 +511,45 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
         )
       );
       showAdminError('Toggle Status Failed', err.message || 'Could not update stock status in backend.');
+    }
+  };
+
+  // 1-Click Activate All 50+ Stocks
+  const handleEnableAllStocks = async () => {
+    const confirmed = await showAdminConfirm(
+      'Activate All 50+ Stocks?',
+      'Are you sure you want to enable and activate all stocks in the system? All 50+ stocks will immediately be made ACTIVE and tradable for all users in the trading portal and mobile app.',
+      'YES, ACTIVATE ALL',
+      'CANCEL'
+    );
+    if (!confirmed) return;
+
+    try {
+      // 1. Optimistic UI update
+      setAssets((prev) => prev.map((a) => ({ ...a, isEnabled: true })));
+
+      // 2. Clear lingering disabled overrides from local storage
+      try {
+        const customQrs = getSavedCustomQrs();
+        Object.keys(customQrs).forEach((k) => {
+          if (customQrs[k] && customQrs[k].isEnabled !== undefined) {
+            customQrs[k].isEnabled = true;
+          }
+        });
+        localStorage.setItem(QR_STORAGE_KEY, JSON.stringify(customQrs));
+      } catch (_) {}
+
+      // 3. Sync to backend API
+      await adminApi.enableAllAssets();
+      showAdminSuccess(
+        'All Stocks Activated',
+        'All 50+ stocks have been ENABLED and made ACTIVE! Users can now trade on all stocks.'
+      );
+      fetchAssets();
+    } catch (err) {
+      console.error('Bulk enable error:', err.message);
+      showAdminError('Activate Stocks Failed', err.message);
+      fetchAssets();
     }
   };
 
@@ -609,7 +659,31 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={handleEnableAllStocks}
+            style={{
+              height: '34px',
+              fontSize: '11px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'rgba(16, 185, 129, 0.15)',
+              color: '#10b981',
+              fontWeight: 800,
+              padding: '0 12px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              letterSpacing: '0.3px',
+              transition: 'all 0.2s ease',
+            }}
+            title="1-Click activate and enable all 50+ stocks so they are tradable in user portal & mobile APK"
+          >
+            <Check size={13} strokeWidth={3} />
+            <span>Enable All 50+ Stocks</span>
+          </button>
           <button
             onClick={handleExportExcel}
             className="square-btn-excel"
@@ -1550,7 +1624,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
 
               {/* Status Toggle Card */}
               <div
-                onClick={() => setFormData({ ...formData, isEnabled: !formData.isEnabled })}
+                onClick={() => setFormData((prev) => ({ ...prev, isEnabled: !prev.isEnabled }))}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1573,8 +1647,9 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
                 </div>
                 <input
                   type="checkbox"
-                  checked={formData.isEnabled}
-                  onChange={(e) => setFormData({ ...formData, isEnabled: e.target.checked })}
+                  checked={Boolean(formData.isEnabled)}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, isEnabled: e.target.checked }))}
                   style={{ width: '18px', height: '18px', accentColor: '#10b981', cursor: 'pointer' }}
                 />
               </div>

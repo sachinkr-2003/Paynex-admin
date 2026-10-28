@@ -921,7 +921,9 @@ export const enrichStockWithPayment = (s, idx = 0) => {
   const rawRate = customRate ?? groupRate ?? stockRate ?? adminSavedPercent;
   const effectiveReturn = Math.min(12, Math.max(2, Number(rawRate)));
   const defaultQr = groupQr || custom?.qrCode || s.qrCode || '';
-  const effectiveEnabled = custom?.isEnabled !== undefined ? Boolean(custom.isEnabled) : (s.isEnabled !== false);
+  const effectiveEnabled = (s.isEnabled !== undefined && s.isEnabled !== null)
+    ? (s.isEnabled !== false)
+    : (custom?.isEnabled !== undefined ? Boolean(custom.isEnabled) : true);
 
   return {
     ...s,

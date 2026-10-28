@@ -127,6 +127,10 @@ export const adminApi = {
       method: 'PUT',
       body: JSON.stringify({ isEnabled, id, symbol, _id }),
     }),
+  enableAllAssets: () =>
+    request('/assets/admin/enable-all', {
+      method: 'PUT',
+    }),
   updateAsset: (id, updates) => {
     const targetIdentifier = updates?._id || (updates?.symbol && !updates.symbol.includes('/') ? updates.symbol : null) || (id && !id.includes('/') ? id : null) || id;
     return request(`/assets/admin/${encodeURIComponent(targetIdentifier)}`, {
