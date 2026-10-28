@@ -65,17 +65,17 @@ export default function DashboardOverview({
     )
     .reduce((sum, r) => sum + (Number(r.payout) || 0), 0);
 
-  // 5. Total User Capital Invested (Inflow)
+  // 5. Total User Capital Invested (Inflow: strictly approved deposits, not double-counting stakes)
   const totalUserInvested =
     kpis?.totalUserInvested !== undefined
       ? Number(kpis.totalUserInvested)
-      : (approvedDepositsAmount + totalStakesAmount);
+      : approvedDepositsAmount;
 
-  // 6. Total Money Paid Out to Users (Outflow)
+  // 6. Total Money Paid Out to Users (Outflow: real bank / UPI disbursements)
   const totalPaidOut =
     kpis?.totalPaidOut !== undefined
       ? Number(kpis.totalPaidOut)
-      : (completedWithdrawalsAmount + totalWonPayouts);
+      : completedWithdrawalsAmount;
 
   // 7. Overall Net Platform Profit / Balance (Inflow - Outflow)
   const netPlatformProfit =
@@ -102,15 +102,32 @@ export default function DashboardOverview({
 
   const handleExportRoundsExcel = () => {
     const headers = [
-      { label: 'Round ID', accessor: 'id' },
+      { label: 'Round ID', accessor: (r) => r.id || (r._id ? `RND-${String(r._id).slice(-5)}` : 'RND') },
       { label: 'Stock / Asset', accessor: 'asset' },
       { label: 'Trader Name', accessor: 'traderName' },
-      { label: 'Staked (INR)', accessor: (r) => `₹${r.stakedAmount}` },
-      { label: 'Return Rate', accessor: (r) => `+${r.returnPercent}%` },
-      { label: 'Profit (INR)', accessor: (r) => `₹${r.profit}` },
-      { label: 'Total Payout (INR)', accessor: (r) => `₹${r.payout}` },
+      { label: 'Staked (INR)', accessor: (r) => `₹${(Number(r.stakedAmount) || 0).toLocaleString('en-IN')}` },
+      { label: 'Return Rate', accessor: (r) => `+${Number(r.returnPercent) || 0}%` },
+      {
+        label: 'Profit (INR)',
+        accessor: (r) => {
+          const s = Number(r.stakedAmount) || 0;
+          const ret = Number(r.returnPercent) || 0;
+          const p = Number(r.profit) > 0 ? Number(r.profit) : Math.round((s * ret) / 100);
+          return `₹${p.toLocaleString('en-IN')}`;
+        },
+      },
+      {
+        label: 'Total Payout (INR)',
+        accessor: (r) => {
+          const s = Number(r.stakedAmount) || 0;
+          const ret = Number(r.returnPercent) || 0;
+          const p = Number(r.profit) > 0 ? Number(r.profit) : Math.round((s * ret) / 100);
+          const py = Number(r.payout) > s ? Number(r.payout) : (s + p);
+          return `₹${py.toLocaleString('en-IN')}`;
+        },
+      },
       { label: 'Status', accessor: 'status' },
-      { label: 'Timestamp', accessor: 'time' },
+      { label: 'Timestamp', accessor: (r) => r.time || 'Active' },
     ];
     exportToExcel('PAYNEX_Live_Trading_Rounds', headers, gameRounds);
     showToast('Trading rounds log exported to Excel (.csv)');
@@ -630,45 +647,54 @@ export default function DashboardOverview({
               </tr>
             </thead>
             <tbody>
-              {gameRounds.slice(0, 15).map((round) => (
-                <tr key={round.id}>
-                  <td style={{ fontFamily: 'monospace', fontWeight: 600, color: '#f59e0b' }}>
-                    {round.id}
-                  </td>
-                  <td style={{ fontWeight: 600, color: '#ffffff' }}>
-                    {round.asset}
-                  </td>
-                  <td style={{ color: '#d1d9e6' }}>
-                    {round.traderName}
-                  </td>
-                  <td style={{ fontFamily: 'monospace', fontWeight: 600, color: '#ffffff' }}>
-                    ₹{round.stakedAmount.toLocaleString('en-IN')}
-                  </td>
-                  <td>
-                    <span className="square-badge badge-gold">
-                      +{round.returnPercent}%
-                    </span>
-                  </td>
-                  <td style={{ fontFamily: 'monospace', fontWeight: 600, color: '#10b981' }}>
-                    +₹{round.profit.toLocaleString('en-IN')}
-                  </td>
-                  <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#f59e0b' }}>
-                    ₹{round.payout.toLocaleString('en-IN')}
-                  </td>
-                  <td>
-                    <span
-                      className={`square-badge ${
-                        round.status === 'Active' ? 'badge-green' : 'badge-gray'
-                      }`}
-                    >
-                      {round.status}
-                    </span>
-                  </td>
-                  <td style={{ fontSize: '11px', color: '#8b9bb4' }}>
-                    {round.time}
-                  </td>
-                </tr>
-              ))}
+              {gameRounds.slice(0, 15).map((round) => {
+                const stakedAmt = Number(round.stakedAmount) || 0;
+                const retPct = Number(round.returnPercent) || 0;
+                const rawProfit = Number(round.profit) || 0;
+                const profitAmt = rawProfit > 0 ? rawProfit : Math.round((stakedAmt * retPct) / 100);
+                const rawPayout = Number(round.payout) || 0;
+                const payoutAmt = rawPayout > stakedAmt ? rawPayout : (stakedAmt + profitAmt);
+                const roundId = round.id || (round._id ? `RND-${String(round._id).slice(-5)}` : 'RND');
+                return (
+                  <tr key={round.id || round._id || Math.random()}>
+                    <td style={{ fontFamily: 'monospace', fontWeight: 600, color: '#f59e0b' }}>
+                      {roundId}
+                    </td>
+                    <td style={{ fontWeight: 600, color: '#ffffff' }}>
+                      {round.asset}
+                    </td>
+                    <td style={{ color: '#d1d9e6' }}>
+                      {round.traderName}
+                    </td>
+                    <td style={{ fontFamily: 'monospace', fontWeight: 600, color: '#ffffff' }}>
+                      ₹{stakedAmt.toLocaleString('en-IN')}
+                    </td>
+                    <td>
+                      <span className="square-badge badge-gold">
+                        +{retPct}%
+                      </span>
+                    </td>
+                    <td style={{ fontFamily: 'monospace', fontWeight: 600, color: '#10b981' }}>
+                      +₹{profitAmt.toLocaleString('en-IN')}
+                    </td>
+                    <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#f59e0b' }}>
+                      ₹{payoutAmt.toLocaleString('en-IN')}
+                    </td>
+                    <td>
+                      <span
+                        className={`square-badge ${
+                          round.status === 'Active' ? 'badge-green' : 'badge-gray'
+                        }`}
+                      >
+                        {round.status}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: '11px', color: '#8b9bb4' }}>
+                      {round.time || 'Active'}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
