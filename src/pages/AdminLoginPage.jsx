@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import adminApi from '../services/api';
 import { showSuccessAlert, showErrorAlert } from '../utils/swal';
-import { ShieldCheck, Zap, AlertTriangle, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 
 export default function AdminLoginPage({ onLoginSuccess }) {
-  const [email, setEmail] = useState('admin@paynex.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -116,21 +116,6 @@ export default function AdminLoginPage({ onLoginSuccess }) {
           </p>
         </div>
 
-        {/* 1-Click Instant Master Admin Fill */}
-        <button
-          type="button"
-          onClick={() => {
-            setEmail('admin@paynex.com');
-            setPassword('admin123');
-            handleSubmit();
-          }}
-          className="w-full mb-5 py-2.5 px-4 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-400 text-xs font-bold tracking-wide flex items-center justify-center gap-2 transition-all cursor-pointer"
-          style={{ borderRadius: '0px' }}
-        >
-          <Zap size={14} className="text-amber-400" />
-          <span>1-Click Auto Fill & Instant Admin Sign In</span>
-        </button>
-
         {/* Error Banner */}
         {errorMessage && (
           <div className="mb-4 p-3 bg-red-500/10 border border-red-500/40 text-red-400 text-xs flex items-center gap-2 font-medium">
@@ -212,14 +197,10 @@ export default function AdminLoginPage({ onLoginSuccess }) {
           </div>
         </form>
 
-        {/* Security Credentials Tip */}
+        {/* Security Credentials Footer */}
         <div className="mt-6 pt-4 border-t border-[#1e2638] text-center">
-          <div className="text-[11px] text-slate-400">
-            Default Super Admin: <span className="text-amber-400 font-mono">admin@paynex.com</span> /{' '}
-            <span className="text-amber-400 font-mono">admin123</span>
-          </div>
-          <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-center gap-1.5 font-mono">
-            <Lock size={12} className="text-slate-400" /> 256-Bit TLS End-to-End Encrypted Session
+          <div className="text-[10px] text-slate-400 flex items-center justify-center gap-1.5 font-mono">
+            <Lock size={12} className="text-amber-500" /> 256-Bit TLS End-to-End Encrypted Session
           </div>
         </div>
       </div>
