@@ -29,21 +29,10 @@ export default function AdminLoginPage({ onLoginSuccess }) {
       );
       onLoginSuccess(res.user || { name: 'Paynex Super Admin', email, role: 'admin' }, res.token);
     } catch (err) {
-      console.warn('Backend login fallback:', err.message);
-      // If email & password match default admin credentials, allow offline emergency access
-      if (email.trim() === 'admin@paynex.com' && password === 'admin123') {
-        setIsLoading(false);
-        showSuccessAlert(
-          'Offline Terminal Access Granted',
-          'Welcome, <strong>Paynex Super Admin</strong>! Connected in local standby mode.'
-        );
-        onLoginSuccess({ name: 'Paynex Super Admin', email: 'admin@paynex.com', role: 'admin' }, 'offline-admin-token');
-      } else {
-        setIsLoading(false);
-        const msg = err.message || 'Invalid administrator credentials. Access denied.';
-        setErrorMessage(msg);
-        showErrorAlert('Authorization Failed', msg);
-      }
+      setIsLoading(false);
+      const msg = err.message || 'Invalid administrator credentials. Access denied.';
+      setErrorMessage(msg);
+      showErrorAlert('Authorization Failed', msg);
     }
   };
 
@@ -137,9 +126,10 @@ export default function AdminLoginPage({ onLoginSuccess }) {
               <input
                 type="email"
                 required
+                autoComplete="off"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@paynex.com"
+                placeholder="Enter administrator email"
                 className="w-full bg-[#0b0e14] border border-[#2a354d] focus:border-amber-500 pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-600 outline-none transition-colors"
                 style={{ borderRadius: '0px' }}
               />
@@ -166,9 +156,10 @@ export default function AdminLoginPage({ onLoginSuccess }) {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Enter password"
                 className="w-full bg-[#0b0e14] border border-[#2a354d] focus:border-amber-500 pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-600 outline-none transition-colors"
                 style={{ borderRadius: '0px' }}
               />
