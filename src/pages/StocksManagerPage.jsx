@@ -67,16 +67,17 @@ const mergeCustomQrsWithAssets = (assetList, currentGroupQrs = null, currentGrou
     const groupRate = (groupRates && groupRates[grp] !== undefined && groupRates[grp] !== null)
       ? Number(groupRates[grp])
       : null;
-    const customRate = (custom?.returnPercent !== undefined && custom?.returnPercent !== null)
-      ? Number(custom.returnPercent)
-      : null;
     const itemRate = (item.returnPercent !== undefined && item.returnPercent !== null && Number(item.returnPercent) > 0)
       ? Number(item.returnPercent)
       : null;
+    const customRate = (custom?.returnPercent !== undefined && custom?.returnPercent !== null)
+      ? Number(custom.returnPercent)
+      : null;
 
-    const rawRate = customRate ?? groupRate ?? itemRate ?? adminSavedPercent;
+    // Database & Server Group Rate ALWAYS take precedence over local device storage
+    const rawRate = groupRate ?? itemRate ?? customRate ?? adminSavedPercent;
     const effectiveRate = Math.min(12, Math.max(2, Number(rawRate)));
-    const effectiveQr = groupQr || custom?.qrCode || item.qrCode || '';
+    const effectiveQr = groupQr || item.qrCode || custom?.qrCode || '';
 
     // AUTHORITATIVE STATUS: Database item.isEnabled ALWAYS overrides localStorage!
     // A stock is active unless explicitly set to false in the database.
@@ -84,21 +85,15 @@ const mergeCustomQrsWithAssets = (assetList, currentGroupQrs = null, currentGrou
       ? (item.isEnabled !== false)
       : (custom?.isEnabled !== undefined ? Boolean(custom.isEnabled) : true);
 
-    if (custom) {
-      return {
-        ...item,
-        group: grp,
-        isEnabled: resolvedEnabled,
-        upiId: custom.upiId !== undefined && custom.upiId.trim() ? custom.upiId : item.upiId,
-        payeeName: custom.payeeName !== undefined && custom.payeeName.trim() ? custom.payeeName : item.payeeName,
-        qrCode: effectiveQr,
-        returnPercent: effectiveRate,
-      };
-    }
+    const effectiveUpi = (item.upiId && item.upiId.trim()) ? item.upiId : (custom?.upiId || '');
+    const effectivePayee = (item.payeeName && item.payeeName.trim()) ? item.payeeName : (custom?.payeeName || `${item.name} Trading Desk`);
+
     return {
       ...item,
       group: grp,
       isEnabled: resolvedEnabled,
+      upiId: effectiveUpi,
+      payeeName: effectivePayee,
       qrCode: effectiveQr,
       returnPercent: effectiveRate,
     };
@@ -172,8 +167,12 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
         } catch (_) {}
       }
 
-      if (res && res.success && Array.isArray(res.assets) && res.assets.length > 0) {
-        setAssets(mergeCustomQrsWithAssets(res.assets, freshGroupQrs, freshGroupRates));
+      const allAssetList = (res && res.allAssets && Array.isArray(res.allAssets) && res.allAssets.length > 0)
+        ? res.allAssets
+        : ((res && res.assets && Array.isArray(res.assets) && res.assets.length > 0) ? res.assets : []);
+
+      if (allAssetList.length > 0) {
+        setAssets(mergeCustomQrsWithAssets(allAssetList, freshGroupQrs, freshGroupRates));
       }
     } catch (err) {
       console.warn('Assets fetch notice:', err.message);
