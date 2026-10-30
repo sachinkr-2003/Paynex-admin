@@ -180,29 +180,27 @@ export const adminApi = {
         return res;
       }
     } catch (err) {
+      if (err.message?.includes('502') || err.message?.includes('offline') || err.message?.includes('Cannot reach')) {
+        throw new Error('Server is offline (502 Bad Gateway). Please restart backend server on Hostinger to save QR.');
+      }
       console.warn('Dedicated bulk-group-qr endpoint notice, using settings fallback:', err.message);
     }
 
     // 2. Fallback to /admin/settings which is supported across all backend versions
+    let currentGroupQrs = { 1: '', 2: '', 3: '', 4: '', 5: '' };
     try {
-      let currentGroupQrs = { 1: '', 2: '', 3: '', 4: '', 5: '' };
-      try {
-        const s = await request('/admin/settings');
-        if (s?.settings?.groupQrs) {
-          currentGroupQrs = { ...currentGroupQrs, ...s.settings.groupQrs };
-        }
-      } catch (_) {}
-      currentGroupQrs[numGroup] = cleanQr;
+      const s = await request('/admin/settings');
+      if (s?.settings?.groupQrs) {
+        currentGroupQrs = { ...currentGroupQrs, ...s.settings.groupQrs };
+      }
+    } catch (_) {}
+    currentGroupQrs[numGroup] = cleanQr;
 
-      const settingsRes = await request('/admin/settings', {
-        method: 'PUT',
-        body: JSON.stringify({ groupQrs: currentGroupQrs }),
-      });
-      return settingsRes;
-    } catch (fallbackErr) {
-      console.warn('Settings fallback sync notice:', fallbackErr.message);
-      return { success: true, localSaved: true };
-    }
+    const settingsRes = await request('/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ groupQrs: currentGroupQrs }),
+    });
+    return settingsRes;
   },
   updateGroupInterestRate: async (group, returnPercent) => {
     const numGroup = Number(group);
@@ -218,29 +216,27 @@ export const adminApi = {
         return res;
       }
     } catch (err) {
+      if (err.message?.includes('502') || err.message?.includes('offline') || err.message?.includes('Cannot reach')) {
+        throw new Error('Server is offline (502 Bad Gateway). Please restart backend server on Hostinger to save Interest Rate.');
+      }
       console.warn('Dedicated bulk-group-interest endpoint notice, using settings fallback:', err.message);
     }
 
     // 2. Fallback to /admin/settings which is supported across all backend versions
+    let currentGroupRates = { 1: 5, 2: 6, 3: 7, 4: 8, 5: 9 };
     try {
-      let currentGroupRates = { 1: 5, 2: 6, 3: 7, 4: 8, 5: 9 };
-      try {
-        const s = await request('/admin/settings');
-        if (s?.settings?.groupInterestRates) {
-          currentGroupRates = { ...currentGroupRates, ...s.settings.groupInterestRates };
-        }
-      } catch (_) {}
-      currentGroupRates[numGroup] = cleanRate;
+      const s = await request('/admin/settings');
+      if (s?.settings?.groupInterestRates) {
+        currentGroupRates = { ...currentGroupRates, ...s.settings.groupInterestRates };
+      }
+    } catch (_) {}
+    currentGroupRates[numGroup] = cleanRate;
 
-      const settingsRes = await request('/admin/settings', {
-        method: 'PUT',
-        body: JSON.stringify({ groupInterestRates: currentGroupRates }),
-      });
-      return settingsRes;
-    } catch (fallbackErr) {
-      console.warn('Settings fallback sync notice:', fallbackErr.message);
-      return { success: true, localSaved: true };
-    }
+    const settingsRes = await request('/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ groupInterestRates: currentGroupRates }),
+    });
+    return settingsRes;
   },
   deleteAsset: (id) =>
     request(`/assets/admin/${encodeURIComponent(id)}`, {
