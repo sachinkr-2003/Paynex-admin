@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { LayoutDashboard, TrendingUp, CreditCard, ArrowDownToLine, Users, MessageSquare, Settings, LogOut, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, CreditCard, ArrowDownToLine, Users, MessageSquare, Settings, LogOut, X, ChevronLeft, ChevronRight, Zap, Layers } from 'lucide-react';
 
 export default function Sidebar({
   activeTab,
@@ -53,6 +53,19 @@ export default function Sidebar({
       icon: <MessageSquare size={18} />,
       badge: 'LIVE AI',
       badgeColor: 'bg-amber-500/15 text-amber-400 border border-amber-500/30',
+    },
+    {
+      id: 'engine',
+      label: 'Staking & Engine',
+      icon: <Zap size={18} />,
+      badge: activeRoundsCount > 0 ? `${activeRoundsCount}` : null,
+      badgeColor: 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30',
+    },
+    {
+      id: 'plans',
+      label: 'Investment Plans',
+      icon: <Layers size={18} />,
+      badge: null,
     },
     {
       id: 'settings',

@@ -33,6 +33,7 @@ export const adminApi = {
   login: async (email, password) => {
     const res = await request('/auth/login', {
       method: 'POST',
+      headers: { 'x-admin-login': 'true' },
       body: JSON.stringify({ email, password }),
     });
     if (res.token) {
@@ -178,7 +179,7 @@ export const adminApi = {
   },
   updateGroupInterestRate: async (group, returnPercent) => {
     const numGroup = Number(group);
-    const cleanRate = Math.min(12, Math.max(2, Number(returnPercent) || 5));
+    const cleanRate = Math.max(1, Number(returnPercent) || 5);
 
     // 1. Try dedicated bulk group interest endpoint
     try {

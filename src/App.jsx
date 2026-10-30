@@ -9,6 +9,8 @@ import UsersPage from './pages/UsersPage';
 import SettingsPage from './pages/SettingsPage';
 import StocksManagerPage from './pages/StocksManagerPage';
 import SupportChatPage from './pages/SupportChatPage';
+import GameEnginePage from './pages/GameEnginePage';
+import PlansPage from './pages/PlansPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import {
   initialKPIs,
@@ -112,6 +114,8 @@ export default function App() {
   const [withdrawals, setWithdrawals] = useState(initialWithdrawals);
   const [gameRounds, setGameRounds] = useState(initialGameRounds);
   const [settings, setSettings] = useState(initialSystemSettings);
+  const [plans, setPlans] = useState([]);
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
   // Toast Helper
   const showToast = (msg) => {
@@ -135,8 +139,11 @@ export default function App() {
 
   // Live Backend Data Fetching on mount & background auto-sync
   useEffect(() => {
+    if (!currentAdmin) return; // only fetch when logged in
     let isMounted = true;
-    const fetchBackendData = async () => {
+
+    const fetchBackendData = async (isInitial = false) => {
+      if (isInitial) setIsLoadingData(true);
       try {
         const [kpiRes, tradersRes, depositsRes, withdrawalsRes, poolRes, plansRes, settingsRes] = await Promise.allSettled([
           adminApi.getDashboardKPIs(),
@@ -151,38 +158,64 @@ export default function App() {
         if (!isMounted) return;
 
         if (kpiRes.status === 'fulfilled' && kpiRes.value?.kpis) {
-          setKpis(kpiRes.value.kpis);
+          setKpis((prev) => ({ ...prev, ...kpiRes.value.kpis }));
+        } else if (kpiRes.status === 'rejected') {
+          console.warn('KPIs fetch failed:', kpiRes.reason?.message);
         }
+
         if (tradersRes.status === 'fulfilled' && Array.isArray(tradersRes.value?.traders)) {
           setTraders(tradersRes.value.traders);
+        } else if (tradersRes.status === 'rejected') {
+          console.warn('Traders fetch failed:', tradersRes.reason?.message);
         }
+
         if (depositsRes.status === 'fulfilled' && Array.isArray(depositsRes.value?.deposits)) {
           setDeposits(depositsRes.value.deposits);
+        } else if (depositsRes.status === 'rejected') {
+          console.warn('Deposits fetch failed:', depositsRes.reason?.message);
         }
+
         if (withdrawalsRes.status === 'fulfilled' && Array.isArray(withdrawalsRes.value?.withdrawals)) {
           setWithdrawals(withdrawalsRes.value.withdrawals);
+        } else if (withdrawalsRes.status === 'rejected') {
+          console.warn('Withdrawals fetch failed:', withdrawalsRes.reason?.message);
         }
-        if (poolRes.status === 'fulfilled' && Array.isArray(poolRes.value?.activeStakers)) {
-          setGameRounds(poolRes.value.activeStakers);
+
+        // staking pool — also fallback to stakers array key
+        if (poolRes.status === 'fulfilled') {
+          const stakers = poolRes.value?.activeStakers || poolRes.value?.stakers || [];
+          if (Array.isArray(stakers)) setGameRounds(stakers);
+        } else if (poolRes.status === 'rejected') {
+          console.warn('Live pool fetch failed:', poolRes.reason?.message);
         }
-        if (plansRes.status === 'fulfilled' && Array.isArray(plansRes.value?.plans)) {
-          setPlans(plansRes.value.plans);
+
+        if (plansRes.status === 'fulfilled') {
+          const fetchedPlans = plansRes.value?.plans || plansRes.value?.data || [];
+          if (Array.isArray(fetchedPlans)) setPlans(fetchedPlans);
+        } else if (plansRes.status === 'rejected') {
+          console.warn('Plans fetch failed:', plansRes.reason?.message);
         }
+
         if (settingsRes.status === 'fulfilled' && settingsRes.value?.settings) {
-          setSettings(settingsRes.value.settings);
+          setSettings((prev) => ({ ...prev, ...settingsRes.value.settings }));
+        } else if (settingsRes.status === 'rejected') {
+          console.warn('Settings fetch failed:', settingsRes.reason?.message);
         }
+
       } catch (err) {
         console.warn('Backend live sync warning:', err.message);
+      } finally {
+        if (isMounted && isInitial) setIsLoadingData(false);
       }
     };
 
-    fetchBackendData();
-    const interval = setInterval(fetchBackendData, 12000); // 12s live polling
+    fetchBackendData(true);
+    const interval = setInterval(() => fetchBackendData(false), 12000); // 12s live polling
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [currentAdmin]);
 
   // Master Audit Export to Excel
   const handleExportAllAudit = () => {
@@ -240,6 +273,11 @@ export default function App() {
   };
 
   const handleAdminLoginSuccess = (user, token) => {
+    // security: only allow admin/superadmin role
+    if (user?.role && user.role !== 'admin' && user.role !== 'superadmin') {
+      swalToast('Access denied. Admin credentials required.');
+      return;
+    }
     setCurrentAdmin(user);
     try {
       localStorage.setItem('paynex_admin_user', JSON.stringify(user));
@@ -363,6 +401,27 @@ export default function App() {
 
           {activeTab === 'support_chat' && (
             <SupportChatPage
+              showToast={showToast}
+              searchQuery={searchQuery}
+            />
+          )}
+
+          {activeTab === 'engine' && (
+            <GameEnginePage
+              kpis={kpis}
+              setKpis={setKpis}
+              gameRounds={gameRounds}
+              setGameRounds={setGameRounds}
+              showToast={showToast}
+              searchQuery={searchQuery}
+              setActiveTab={setActiveTab}
+            />
+          )}
+
+          {activeTab === 'plans' && (
+            <PlansPage
+              plans={plans}
+              setPlans={setPlans}
               showToast={showToast}
               searchQuery={searchQuery}
             />

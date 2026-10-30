@@ -13,21 +13,7 @@ export const initialKPIs = {
   reserveBalance: 0,
 };
 
-export const initialTraders = [
-  {
-    uid: 'PAYNEX-884920',
-    name: 'Sachin Kumar (Skraj0451)',
-    email: 'skraj0451@gmail.com',
-    phone: '+91 98765 43210',
-    balance: 0,
-    totalStaked: 0,
-    totalWon: 0,
-    kycStatus: 'Verified',
-    isBanned: false,
-    joinDate: '2026-01-14',
-    vipLevel: 'VIP 1',
-  },
-];
+export const initialTraders = [];
 
 export const initialDeposits = [];
 

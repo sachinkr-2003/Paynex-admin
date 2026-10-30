@@ -789,7 +789,14 @@ export const G1 = ['TATAMOTORS', 'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBA
 export const G2 = ['KOTAKBANK', 'BAJFINANCE', 'MARUTI', 'SUNPHARMA', 'ADANIENT', 'ADANIPORTS', 'TATASTEEL', 'TITAN', 'ASIANPAINT', 'NTPC', 'POWERGRID', 'COALINDIA'];
 export const G3 = ['M&M', 'MM', 'WIPRO', 'ULTRACEMCO', 'BAJAJFINSV', 'ONGC', 'NESTLEIND', 'JSWSTEEL', 'TECHM', 'INDUSINDBK', 'TATACONSUM', 'HINDALCO', 'CIPLA'];
 export const G4 = ['DRREDDY', 'GRASIM', 'SBILIFE', 'HDFCLIFE', 'APOLLOHOSP', 'EICHERMOT', 'DIVISLAB', 'HEROMOTOCO', 'BAJAJ-AUTO', 'BRITANNIA', 'BPCL', 'ZOMATO'];
-export const G5 = ['JIOFIN', 'PAYTM', 'AAPL', 'TSLA', 'NVDA', 'MSFT', 'BTC/USDT', 'BTC', 'ETH/USDT', 'ETH', 'SOL/USDT', 'SOL', 'BNB/USDT', 'BNB', 'GOLD/INR', 'GOLD', 'SILVER/INR', 'SILVER'];
+export const G5 = [
+  'JIOFIN', 'PAYTM', 'AAPL', 'TSLA', 'NVDA', 'MSFT',
+  'BTC/USDT', 'BTC', 'ETH/USDT', 'ETH', 'SOL/USDT', 'SOL', 'BNB/USDT', 'BNB',
+  'USDT/INR', 'USDT', 'XRP/USDT', 'XRP', 'DOGE/USDT', 'DOGE',
+  'ADA/USDT', 'ADA', 'TRX/USDT', 'TRX', 'MATIC/USDT', 'MATIC',
+  'DOT/USDT', 'DOT', 'LTC/USDT', 'LTC', 'AVAX/USDT', 'AVAX',
+  'GOLD/INR', 'GOLD', 'SILVER/INR', 'SILVER'
+];
 
 export const GROUP_INFO = {
   1: { id: 1, name: 'Group 1 (Banking & Bluechips)', short: 'Group 1', color: '#38bdf8', badgeBg: 'rgba(56, 189, 248, 0.15)', badgeBorder: '#38bdf8' },
@@ -836,7 +843,7 @@ export const saveGroupQrToStorage = (group, qrCode) => {
 
 export const GROUP_INTEREST_STORAGE_KEY = 'paynex_group_interest_rates';
 
-export const DEFAULT_GROUP_INTEREST = { 1: 5, 2: 6, 3: 7, 4: 8, 5: 9 };
+export const DEFAULT_GROUP_INTEREST = { 1: 8, 2: 11.5, 3: 11.5, 4: 11.5, 5: 11.5 };
 
 export const getSavedGroupInterestRates = () => {
   try {
@@ -850,7 +857,7 @@ export const getSavedGroupInterestRates = () => {
 export const saveGroupInterestRateToStorage = (group, rate) => {
   try {
     const current = getSavedGroupInterestRates();
-    current[group] = Math.min(12, Math.max(2, Number(rate) || 5));
+    current[group] = Math.max(1, Number(rate) || 5);
     localStorage.setItem(GROUP_INTEREST_STORAGE_KEY, JSON.stringify(current));
     return current;
   } catch {
@@ -872,23 +879,27 @@ export const getCustomQrOverride = (stock) => {
 };
 
 export const getCompanyQrUrl = (stock, amount = null) => {
+  // 1. Stock ka apna qrCode (server se aaya) - highest priority
+  if (stock?.qrCode && stock.qrCode.trim().length > 0) {
+    return stock.qrCode.trim();
+  }
+
+  // 2. Group QR from localStorage (server ne save kiya tha)
   const grp = getStockGroup(stock);
   const groupQrs = getSavedGroupQrs();
   const groupQr = (groupQrs && groupQrs[grp]) ? groupQrs[grp].trim() : '';
-
-  // 1. Group QR is authoritative: 1 group ka 1 qr sabhi companies me lag jaye!
   if (groupQr && groupQr.length > 0) {
     return groupQr;
   }
 
-  // 2. Custom or individual stock QR override
+  // 3. Custom individual override
   const custom = getCustomQrOverride(stock);
-  const effectiveQr = (custom?.qrCode && custom.qrCode.trim()) || (stock?.qrCode && stock.qrCode.trim());
-  if (effectiveQr && effectiveQr.length > 0) {
+  const effectiveQr = (custom?.qrCode && custom.qrCode.trim()) || '';
+  if (effectiveQr.length > 0) {
     return effectiveQr;
   }
 
-  // 3. Fallback to clean QR generator
+  // 4. Fallback to clean QR generator
   const cleanSym = (stock?.symbol || stock?.id || 'STOCK').toUpperCase().replace(/[^A-Z0-9]/g, '');
   const amtParam = amount && Number(amount) > 0 ? `_${Number(amount)}` : '';
   const qrData = `PAYNEX_DEPOSIT_${cleanSym}${amtParam}`;
@@ -919,7 +930,7 @@ export const enrichStockWithPayment = (s, idx = 0) => {
     : null;
 
   const rawRate = customRate ?? groupRate ?? stockRate ?? adminSavedPercent;
-  const effectiveReturn = Math.min(12, Math.max(2, Number(rawRate)));
+  const effectiveReturn = Math.max(1, Number(rawRate));
   const defaultQr = groupQr || custom?.qrCode || s.qrCode || '';
   const effectiveEnabled = (s.isEnabled !== undefined && s.isEnabled !== null)
     ? (s.isEnabled !== false)
