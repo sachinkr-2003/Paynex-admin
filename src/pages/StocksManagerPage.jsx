@@ -154,8 +154,9 @@ export const compressQrImage = (file) => {
 };
 
 export default function StocksManagerPage({ showToast, searchQuery = '' }) {
-  const [assets, setAssets] = useState(() => mergeCustomQrsWithAssets(FIFTY_STOCKS.map(enrichStockWithPayment)));
+  const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'DISABLED'
   const [groupFilter, setGroupFilter] = useState('ALL'); // 'ALL' | 1 | 2 | 3 | 4 | 5
   const [groupQrs, setGroupQrs] = useState(getSavedGroupQrs);
@@ -181,6 +182,7 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
 
   const fetchAssets = async () => {
     try {
+      setFetchError(null);
       const res = await adminApi.getAssets();
 
       // Always prefer server data over localStorage
@@ -215,15 +217,18 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
         } catch (_) {}
       }
 
-      const allAssetList = (res?.assets && Array.isArray(res.assets) && res.assets.length > 0)
+      const allAssetList = (res?.assets && Array.isArray(res.assets))
         ? res.assets
         : [];
 
       if (allAssetList.length > 0) {
         setAssets(mergeCustomQrsWithAssets(allAssetList, freshGroupQrs, freshGroupRates));
+      } else {
+        setAssets([]);
       }
     } catch (err) {
       console.warn('Assets fetch notice:', err.message);
+      setFetchError(err.message || 'Cannot connect to backend server');
     } finally {
       setLoading(false);
     }
@@ -603,6 +608,42 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Server Offline / Fetch Error Warning */}
+      {fetchError && (
+        <div
+          className="square-card"
+          style={{
+            padding: '12px 18px',
+            backgroundColor: 'rgba(153, 27, 27, 0.4)',
+            border: '1px solid rgba(239, 68, 68, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fca5a5', fontSize: '12px', fontWeight: 700 }}>
+            <Ban size={16} className="text-red-400" />
+            <span>SERVER OFFLINE / SYNC ERROR: {fetchError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={fetchAssets}
+            style={{
+              padding: '6px 14px',
+              backgroundColor: 'rgba(239, 68, 68, 0.3)',
+              border: '1px solid #ef4444',
+              color: '#ffffff',
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer',
+            }}
+          >
+            Retry Server
+          </button>
+        </div>
+      )}
+
       {/* 1. Header Bar with Quick Action */}
       <div
         className="square-card"

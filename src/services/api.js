@@ -17,19 +17,33 @@ async function request(endpoint, options = {}) {
       headers,
     });
 
+    // Check if server returned 502/503/504 or HTML instead of JSON
+    const contentType = response.headers.get('content-type') || '';
+    if (response.status === 502 || response.status === 503 || response.status === 504) {
+      throw new Error(`Server is offline (${response.status} Bad Gateway). Please start backend server on Hostinger.`);
+    }
+
+    if (!contentType.includes('application/json')) {
+      const text = await response.text();
+      throw new Error(`Server returned unexpected response (${response.status}): ${text.slice(0, 100)}`);
+    }
+
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.message || `HTTP error! status: ${response.status}`);
     }
     return data;
   } catch (error) {
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      throw new Error('Cannot reach backend server. Please verify server status on Hostinger.');
+    }
     console.error(`API Error [${endpoint}]:`, error.message);
     throw error;
   }
 }
 
 export const adminApi = {
-  // Auth
+  // Auth & Session
   login: async (email, password) => {
     const res = await request('/auth/login', {
       method: 'POST',
@@ -41,6 +55,19 @@ export const adminApi = {
     }
     return res;
   },
+
+  verifySession: async () => {
+    const res = await request('/auth/me');
+    if (!res?.user) {
+      throw new Error('Authentication session invalid');
+    }
+    if (res.user.role !== 'admin' && res.user.role !== 'superadmin') {
+      throw new Error('Access denied. Administrator clearance required.');
+    }
+    return res.user;
+  },
+
+  checkServerHealth: () => request('/health'),
 
   // Dashboard KPIs
   getDashboardKPIs: () => request('/admin/dashboard-kpis'),

@@ -1,14 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import adminApi from '../services/api';
 import { showSuccessAlert, showErrorAlert } from '../utils/swal';
-import { ShieldCheck, AlertTriangle, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, Mail, Lock, Loader2, ArrowRight, RefreshCw, ServerCrash, CheckCircle2 } from 'lucide-react';
 
-export default function AdminLoginPage({ onLoginSuccess }) {
+export default function AdminLoginPage({ onLoginSuccess, initialServerError = null, onRetryServer = null }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [serverOffline, setServerOffline] = useState(Boolean(initialServerError));
+  const [isCheckingServer, setIsCheckingServer] = useState(false);
+  const [serverOnlineMessage, setServerOnlineMessage] = useState('');
+
+  useEffect(() => {
+    if (initialServerError) {
+      setServerOffline(true);
+      setErrorMessage(initialServerError);
+    }
+  }, [initialServerError]);
+
+  const handleCheckServer = async () => {
+    setIsCheckingServer(true);
+    setServerOnlineMessage('');
+    try {
+      await adminApi.checkServerHealth();
+      setServerOffline(false);
+      setErrorMessage('');
+      setServerOnlineMessage('Backend server is ONLINE! You can now log in.');
+      if (onRetryServer) onRetryServer();
+    } catch (err) {
+      setServerOffline(true);
+      setErrorMessage('Server is still OFFLINE (502 Bad Gateway). Please restart backend process in Hostinger.');
+    } finally {
+      setIsCheckingServer(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -19,6 +46,7 @@ export default function AdminLoginPage({ onLoginSuccess }) {
 
     setIsLoading(true);
     setErrorMessage('');
+    setServerOnlineMessage('');
 
     try {
       const res = await adminApi.login(email.trim(), password);
@@ -32,6 +60,9 @@ export default function AdminLoginPage({ onLoginSuccess }) {
       setIsLoading(false);
       const msg = err.message || 'Invalid administrator credentials. Access denied.';
       setErrorMessage(msg);
+      if (msg.toLowerCase().includes('offline') || msg.toLowerCase().includes('502') || msg.toLowerCase().includes('cannot reach')) {
+        setServerOffline(true);
+      }
       showErrorAlert('Authorization Failed', msg);
     }
   };
@@ -105,8 +136,37 @@ export default function AdminLoginPage({ onLoginSuccess }) {
           </p>
         </div>
 
-        {/* Error Banner */}
-        {errorMessage && (
+        {/* Server Status Messages */}
+        {serverOnlineMessage && (
+          <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 text-xs flex items-center gap-2 font-medium">
+            <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+            <span>{serverOnlineMessage}</span>
+          </div>
+        )}
+
+        {serverOffline && (
+          <div className="mb-4 p-3.5 bg-red-950/60 border border-red-500/70 text-red-300 text-xs space-y-2">
+            <div className="flex items-center gap-2 font-bold text-red-200">
+              <ServerCrash size={16} className="text-red-400 shrink-0" />
+              <span>SERVER OFFLINE (502 Bad Gateway)</span>
+            </div>
+            <p className="text-[11px] text-red-300 leading-relaxed font-mono">
+              Live backend server connect nahi ho raha hai. Admin Terminal offline mode me nahi chal sakta. Jab server chalu hoga tabhi login hoga.
+            </p>
+            <button
+              type="button"
+              onClick={handleCheckServer}
+              disabled={isCheckingServer}
+              className="w-full py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-200 font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-colors"
+            >
+              <RefreshCw size={12} className={isCheckingServer ? 'animate-spin' : ''} />
+              <span>{isCheckingServer ? 'Checking Server...' : 'Re-Check Server Connection'}</span>
+            </button>
+          </div>
+        )}
+
+        {/* Generic Error Banner */}
+        {errorMessage && !serverOffline && (
           <div className="mb-4 p-3 bg-red-500/10 border border-red-500/40 text-red-400 text-xs flex items-center gap-2 font-medium">
             <AlertTriangle size={15} className="text-red-400 shrink-0" />
             <span>{errorMessage}</span>

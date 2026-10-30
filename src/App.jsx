@@ -26,14 +26,11 @@ import { showConfirmDialog, showToast as swalToast } from './utils/swal';
 import { Zap, X } from 'lucide-react';
 
 export default function App() {
-  const [currentAdmin, setCurrentAdmin] = useState(() => {
-    try {
-      const saved = localStorage.getItem('paynex_admin_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [currentAdmin, setCurrentAdmin] = useState(null);
+  const [isVerifyingSession, setIsVerifyingSession] = useState(true);
+  const [serverOfflineError, setServerOfflineError] = useState(null);
+  const [isServerDisconnected, setIsServerDisconnected] = useState(false);
+  const [verifyRetryTrigger, setVerifyRetryTrigger] = useState(0);
 
   const VALID_TABS = [
     'dashboard',
@@ -109,10 +106,10 @@ export default function App() {
     return initialKPIs;
   });
 
-  const [traders, setTraders] = useState(initialTraders);
-  const [deposits, setDeposits] = useState(initialDeposits);
-  const [withdrawals, setWithdrawals] = useState(initialWithdrawals);
-  const [gameRounds, setGameRounds] = useState(initialGameRounds);
+  const [traders, setTraders] = useState([]);
+  const [deposits, setDeposits] = useState([]);
+  const [withdrawals, setWithdrawals] = useState([]);
+  const [gameRounds, setGameRounds] = useState([]);
   const [settings, setSettings] = useState(initialSystemSettings);
   const [plans, setPlans] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
@@ -136,6 +133,60 @@ export default function App() {
       localStorage.setItem('paynex_admin_percent', String(kpis.adminProfitPercent));
     } catch {}
   }, [kpis.adminProfitPercent]);
+
+  // Strict Server Verification on Mount: Only allow admin in if live server verifies token
+  useEffect(() => {
+    let isMounted = true;
+    const verifySessionOnMount = async () => {
+      const token = localStorage.getItem('paynex_admin_token');
+      if (!token) {
+        if (isMounted) {
+          setCurrentAdmin(null);
+          setIsVerifyingSession(false);
+        }
+        return;
+      }
+
+      setIsVerifyingSession(true);
+      try {
+        const user = await adminApi.verifySession();
+        if (isMounted) {
+          setCurrentAdmin(user);
+          localStorage.setItem('paynex_admin_user', JSON.stringify(user));
+          setServerOfflineError(null);
+          setIsServerDisconnected(false);
+          setIsVerifyingSession(false);
+        }
+      } catch (err) {
+        console.error('Session verification error:', err.message);
+        if (isMounted) {
+          setCurrentAdmin(null);
+          localStorage.removeItem('paynex_admin_user');
+          const isOffline =
+            err.message?.includes('502') ||
+            err.message?.includes('offline') ||
+            err.message?.includes('Cannot reach') ||
+            err.message?.includes('NetworkError') ||
+            err.message?.includes('Failed to fetch');
+
+          if (isOffline) {
+            setServerOfflineError(
+              'Server is currently offline (502 Bad Gateway). Admin Terminal offline kaam nahi karta. Please Hostinger par server start karein.'
+            );
+          } else {
+            localStorage.removeItem('paynex_admin_token');
+            setServerOfflineError(err.message || 'Session expired. Please log in again.');
+          }
+          setIsVerifyingSession(false);
+        }
+      }
+    };
+
+    verifySessionOnMount();
+    return () => {
+      isMounted = false;
+    };
+  }, [verifyRetryTrigger]);
 
   // Live Backend Data Fetching on mount & background auto-sync
   useEffect(() => {
@@ -201,6 +252,18 @@ export default function App() {
         } else if (settingsRes.status === 'rejected') {
           console.warn('Settings fetch failed:', settingsRes.reason?.message);
         }
+
+        const results = [kpiRes, tradersRes, depositsRes, withdrawalsRes, poolRes, plansRes, settingsRes];
+        const isOffline = results.some(
+          (r) =>
+            r.status === 'rejected' &&
+            (r.reason?.message?.includes('502') ||
+              r.reason?.message?.includes('offline') ||
+              r.reason?.message?.includes('Cannot reach') ||
+              r.reason?.message?.includes('NetworkError'))
+        );
+        const allFailed = results.every((r) => r.status === 'rejected');
+        setIsServerDisconnected(isOffline || allFailed);
 
       } catch (err) {
         console.warn('Backend live sync warning:', err.message);
@@ -302,9 +365,46 @@ export default function App() {
     }
   };
 
+  // While verifying session with live server on boot
+  if (isVerifyingSession) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#0b0e14] text-white p-6 font-sans">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 border border-amber-500 bg-black flex items-center justify-center p-1">
+            <img
+              src="/paynex-logo.jpg"
+              alt="Logo"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+          </div>
+          <div>
+            <div className="font-extrabold text-base tracking-wider text-white">PAYNEX CRYPTO</div>
+            <div className="text-[10px] text-amber-500 font-mono tracking-widest">MASTER ADMIN TERMINAL</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5 text-xs text-slate-400 font-mono">
+          <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <span>Connecting to live server (api.paynex.co.in)...</span>
+        </div>
+      </div>
+    );
+  }
+
   // If not authenticated as Super Admin, display dedicated Admin Login Page
   if (!currentAdmin) {
-    return <AdminLoginPage onLoginSuccess={handleAdminLoginSuccess} />;
+    return (
+      <AdminLoginPage
+        onLoginSuccess={handleAdminLoginSuccess}
+        initialServerError={serverOfflineError}
+        onRetryServer={() => {
+          setServerOfflineError(null);
+          setVerifyRetryTrigger((prev) => prev + 1);
+        }}
+      />
+    );
   }
 
   const pendingDepositsCount = deposits.filter((d) => d.status === 'Pending').length;
@@ -313,6 +413,22 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen w-full bg-[#0b0e14] text-slate-100 overflow-x-clip relative font-sans">
+      {/* Real-time Server Offline Banner */}
+      {isServerDisconnected && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-red-600/95 text-white text-xs font-bold px-4 py-2.5 flex items-center justify-between shadow-2xl backdrop-blur-sm border-b border-red-400">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping shrink-0" />
+            <span>⚠️ SERVER OFFLINE (502 Bad Gateway) — Hostinger VPS se live backend disconnected hai. Data updates pause hain.</span>
+          </div>
+          <button
+            onClick={() => setVerifyRetryTrigger((p) => p + 1)}
+            className="px-3 py-1 bg-white text-red-700 hover:bg-slate-100 font-black text-[10px] uppercase tracking-wider rounded transition-colors shrink-0"
+          >
+            Retry Sync
+          </button>
+        </div>
+      )}
+
       {/* Strict Square Navigation Sidebar */}
       <Sidebar
         activeTab={activeTab}
