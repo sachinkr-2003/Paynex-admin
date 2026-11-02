@@ -154,8 +154,8 @@ export const compressQrImage = (file) => {
 };
 
 export default function StocksManagerPage({ showToast, searchQuery = '' }) {
-  const [assets, setAssets] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [assets, setAssets] = useState(() => mergeCustomQrsWithAssets(FIFTY_STOCKS || []));
+  const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'DISABLED'
   const [groupFilter, setGroupFilter] = useState('ALL'); // 'ALL' | 1 | 2 | 3 | 4 | 5
@@ -217,18 +217,19 @@ export default function StocksManagerPage({ showToast, searchQuery = '' }) {
         } catch (_) {}
       }
 
-      const allAssetList = (res?.assets && Array.isArray(res.assets))
+      const allAssetList = (res?.assets && Array.isArray(res.assets) && res.assets.length > 0)
         ? res.assets
-        : [];
+        : (FIFTY_STOCKS && Array.isArray(FIFTY_STOCKS) && FIFTY_STOCKS.length > 0)
+          ? FIFTY_STOCKS
+          : [];
 
-      if (allAssetList.length > 0) {
-        setAssets(mergeCustomQrsWithAssets(allAssetList, freshGroupQrs, freshGroupRates));
-      } else {
-        setAssets([]);
-      }
+      setAssets(mergeCustomQrsWithAssets(allAssetList, freshGroupQrs, freshGroupRates));
     } catch (err) {
       console.warn('Assets fetch notice:', err.message);
-      setFetchError(err.message || 'Cannot connect to backend server');
+      // Fallback immediately to FIFTY_STOCKS so the Admin Panel NEVER displays an empty list
+      if (FIFTY_STOCKS && Array.isArray(FIFTY_STOCKS) && FIFTY_STOCKS.length > 0) {
+        setAssets((prev) => (prev && prev.length > 0) ? prev : mergeCustomQrsWithAssets(FIFTY_STOCKS, groupQrs, groupRates));
+      }
     } finally {
       setLoading(false);
     }
