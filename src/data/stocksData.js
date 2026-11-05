@@ -5,8 +5,8 @@ export const FIFTY_STOCKS = [
     name: 'Tata Motors Ltd',
     symbol: 'TATAMOTORS',
     category: 'Stock',
-    basePrice: 980.5,
-    step: 1.5,
+    basePrice: 404.0,
+    step: 0.8,
     icon: 'car',
     color: '#38bdf8',
     returnPercent: 40,
@@ -18,8 +18,8 @@ export const FIFTY_STOCKS = [
     name: 'Reliance Industries',
     symbol: 'RELIANCE',
     category: 'Stock',
-    basePrice: 2950.0,
-    step: 3.5,
+    basePrice: 1295.0,
+    step: 1.5,
     icon: 'building',
     color: '#10b981',
     returnPercent: 22,
@@ -821,12 +821,27 @@ export const getStockGroup = (stock, index = 0) => {
 
 export const GROUP_QRS_STORAGE_KEY = 'paynex_group_qrs';
 
+export const DEFAULT_GROUP_QRS = {
+  1: '/images/qr_group_1.jpg',
+  2: '/images/qr_group_2.jpg',
+  3: '/images/qr_group_3.jpg',
+  4: '/images/qr_group_4.jpg',
+  5: '/images/qr_group_5.jpg',
+};
+
 export const getSavedGroupQrs = () => {
   try {
     const raw = localStorage.getItem(GROUP_QRS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : { 1: '', 2: '', 3: '', 4: '', 5: '' };
+    const parsed = raw ? JSON.parse(raw) : {};
+    return {
+      1: (parsed[1] && parsed[1].trim()) || (parsed['1'] && parsed['1'].trim()) || DEFAULT_GROUP_QRS[1],
+      2: (parsed[2] && parsed[2].trim()) || (parsed['2'] && parsed['2'].trim()) || DEFAULT_GROUP_QRS[2],
+      3: (parsed[3] && parsed[3].trim()) || (parsed['3'] && parsed['3'].trim()) || DEFAULT_GROUP_QRS[3],
+      4: (parsed[4] && parsed[4].trim()) || (parsed['4'] && parsed['4'].trim()) || DEFAULT_GROUP_QRS[4],
+      5: (parsed[5] && parsed[5].trim()) || (parsed['5'] && parsed['5'].trim()) || DEFAULT_GROUP_QRS[5],
+    };
   } catch {
-    return { 1: '', 2: '', 3: '', 4: '', 5: '' };
+    return { ...DEFAULT_GROUP_QRS };
   }
 };
 
@@ -879,70 +894,81 @@ export const getCustomQrOverride = (stock) => {
 };
 
 export const getCompanyQrUrl = (stock, amount = null) => {
+  const grp = getStockGroup(stock);
+  const safeGrp = Math.min(5, Math.max(1, grp));
+  const fallbackAsset = `/images/qr_group_${safeGrp}.jpg`;
+
+  const normalizeWebQr = (qr) => {
+    if (!qr || typeof qr !== 'string') return '';
+    const clean = qr.trim();
+    if (!clean) return '';
+    if (clean.startsWith('assets/')) {
+      const fn = clean.split('/').pop();
+      return `/images/${fn}`;
+    }
+    return clean;
+  };
+
   // 1. Stock ka apna qrCode (server se aaya) - highest priority
   if (stock?.qrCode && stock.qrCode.trim().length > 0) {
-    return stock.qrCode.trim();
+    const n = normalizeWebQr(stock.qrCode);
+    if (n) return n;
   }
 
-  // 2. Group QR from localStorage (server ne save kiya tha)
-  const grp = getStockGroup(stock);
+  // 2. Group QR from localStorage / defaults
   const groupQrs = getSavedGroupQrs();
-  const groupQr = (groupQrs && groupQrs[grp]) ? groupQrs[grp].trim() : '';
-  if (groupQr && groupQr.length > 0) {
-    return groupQr;
+  const rawGroupQr = (groupQrs && (groupQrs[safeGrp] || groupQrs[String(safeGrp)]))
+    ? (groupQrs[safeGrp] || groupQrs[String(safeGrp)]).trim()
+    : '';
+  const normalizedGroupQr = normalizeWebQr(rawGroupQr);
+  if (normalizedGroupQr && normalizedGroupQr.length > 0) {
+    return normalizedGroupQr;
   }
 
   // 3. Custom individual override
   const custom = getCustomQrOverride(stock);
   const effectiveQr = (custom?.qrCode && custom.qrCode.trim()) || '';
   if (effectiveQr.length > 0) {
-    return effectiveQr;
+    return normalizeWebQr(effectiveQr);
   }
 
-  // 4. Fallback to clean QR generator
-  const cleanSym = (stock?.symbol || stock?.id || 'STOCK').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const amtParam = amount && Number(amount) > 0 ? `_${Number(amount)}` : '';
-  const qrData = `PAYNEX_DEPOSIT_${cleanSym}${amtParam}`;
-  return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrData)}`;
+  // 4. Guaranteed bundled local group asset
+  return fallbackAsset;
 };
 
 export const enrichStockWithPayment = (s, idx = 0) => {
   const grp = getStockGroup(s, idx);
+  const safeGrp = Math.min(5, Math.max(1, grp));
   const groupQrs = getSavedGroupQrs();
-  const groupQr = (groupQrs && groupQrs[grp]) ? groupQrs[grp].trim() : '';
+  const groupQr = (groupQrs && (groupQrs[safeGrp] || groupQrs[String(safeGrp)]))
+    ? (groupQrs[safeGrp] || groupQrs[String(safeGrp)]).trim()
+    : `/images/qr_group_${safeGrp}.jpg`;
   const groupRates = getSavedGroupInterestRates();
-  let adminSavedPercent = 12;
-  try {
-    const p = localStorage.getItem('paynex_admin_percent');
-    if (p) adminSavedPercent = Number(p) || 12;
-  } catch (_) {}
 
-  // Admin Full Control: Individual Custom/DB Rate > Group Rate > Master Admin Percent
-  const groupRate = (groupRates && groupRates[grp] !== undefined && groupRates[grp] !== null)
-    ? Number(groupRates[grp])
-    : null;
+  // Authoritative Group Rate
+  const defaultGroupRate = DEFAULT_GROUP_INTEREST[safeGrp] || 11.5;
+  const groupRate = (groupRates && (groupRates[safeGrp] !== undefined || groupRates[String(safeGrp)] !== undefined))
+    ? Number(groupRates[safeGrp] ?? groupRates[String(safeGrp)])
+    : defaultGroupRate;
   const custom = getCustomQrOverride(s);
   const customRate = (custom?.returnPercent !== undefined && custom?.returnPercent !== null)
     ? Number(custom.returnPercent)
     : null;
-  const stockRate = (s.returnPercent !== undefined && s.returnPercent !== null && Number(s.returnPercent) > 0)
-    ? Number(s.returnPercent)
-    : null;
 
-  const rawRate = customRate ?? groupRate ?? stockRate ?? adminSavedPercent;
+  const rawRate = customRate ?? groupRate ?? defaultGroupRate;
   const effectiveReturn = Math.max(1, Number(rawRate));
-  const defaultQr = groupQr || custom?.qrCode || s.qrCode || '';
+  const defaultQr = groupQr || custom?.qrCode || s.qrCode || `/images/qr_group_${safeGrp}.jpg`;
   const effectiveEnabled = (s.isEnabled !== undefined && s.isEnabled !== null)
     ? (s.isEnabled !== false)
     : (custom?.isEnabled !== undefined ? Boolean(custom.isEnabled) : true);
 
   return {
     ...s,
-    group: grp,
+    group: safeGrp,
     isEnabled: effectiveEnabled,
     returnPercent: effectiveReturn,
     minStake: Math.max(1000, Number(s.minStake) || 1000),
-    upiId: custom?.upiId || s.upiId || '',
+    upiId: custom?.upiId || s.upiId || 'paynex.crypto@icici',
     payeeName: custom?.payeeName || s.payeeName || `${s.name} Trading Desk`,
     qrCode: defaultQr,
   };

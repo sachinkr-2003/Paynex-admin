@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.paynex.co.in/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://paynex-backend-hsit.onrender.com/api';
 
 /**
  * Universal request wrapper with error handling and optional auth token
@@ -166,11 +166,36 @@ export const adminApi = {
       body: JSON.stringify({ ...updates, id, _id: updates?._id }),
     });
   },
+  // Dedicated Single QR APIs
+  getQrAll: () => request('/qr'),
+  getGroupQr: (group) => request(`/qr/${group}?format=json`),
   updateGroupQr: async (group, qrCode) => {
     const numGroup = Number(group);
     const cleanQr = (qrCode || '').trim();
 
-    // 1. Try dedicated bulk group QR route
+    // 1. Try dedicated single-group QR endpoint
+    try {
+      const res = await request(`/qr/${numGroup}`, {
+        method: 'PUT',
+        body: JSON.stringify({ qrCode: cleanQr }),
+      });
+      if (res && res.success !== false) {
+        return res;
+      }
+    } catch (_) {}
+
+    // 2. Try /assets/group-qr route
+    try {
+      const res = await request('/assets/group-qr', {
+        method: 'PUT',
+        body: JSON.stringify({ group: numGroup, qrCode: cleanQr }),
+      });
+      if (res && res.success !== false) {
+        return res;
+      }
+    } catch (_) {}
+
+    // 3. Try legacy bulk group QR route
     try {
       const res = await request('/assets/admin/bulk-group-qr', {
         method: 'PUT',
@@ -181,12 +206,12 @@ export const adminApi = {
       }
     } catch (err) {
       if (err.message?.includes('502') || err.message?.includes('offline') || err.message?.includes('Cannot reach')) {
-        throw new Error('Server is offline (502 Bad Gateway). Please restart backend server on Hostinger to save QR.');
+        throw new Error('Server is offline (502 Bad Gateway). Please check backend server.');
       }
       console.warn('Dedicated bulk-group-qr endpoint notice, using settings fallback:', err.message);
     }
 
-    // 2. Fallback to /admin/settings which is supported across all backend versions
+    // 4. Fallback to /admin/settings which is supported across all backend versions
     let currentGroupQrs = { 1: '', 2: '', 3: '', 4: '', 5: '' };
     try {
       const s = await request('/admin/settings');
@@ -202,11 +227,37 @@ export const adminApi = {
     });
     return settingsRes;
   },
+
+  // Dedicated Single Interest APIs
+  getInterestAll: () => request('/interest'),
+  getGroupInterest: (group) => request(`/interest/${group}`),
   updateGroupInterestRate: async (group, returnPercent) => {
     const numGroup = Number(group);
     const cleanRate = Math.max(1, Number(returnPercent) || 5);
 
-    // 1. Try dedicated bulk group interest endpoint
+    // 1. Try dedicated single-group interest endpoint
+    try {
+      const res = await request(`/interest/${numGroup}`, {
+        method: 'PUT',
+        body: JSON.stringify({ returnPercent: cleanRate }),
+      });
+      if (res && res.success !== false) {
+        return res;
+      }
+    } catch (_) {}
+
+    // 2. Try /assets/group-interest route
+    try {
+      const res = await request('/assets/group-interest', {
+        method: 'PUT',
+        body: JSON.stringify({ group: numGroup, returnPercent: cleanRate }),
+      });
+      if (res && res.success !== false) {
+        return res;
+      }
+    } catch (_) {}
+
+    // 3. Try legacy bulk group interest endpoint
     try {
       const res = await request('/assets/admin/bulk-group-interest', {
         method: 'PUT',
@@ -217,12 +268,12 @@ export const adminApi = {
       }
     } catch (err) {
       if (err.message?.includes('502') || err.message?.includes('offline') || err.message?.includes('Cannot reach')) {
-        throw new Error('Server is offline (502 Bad Gateway). Please restart backend server on Hostinger to save Interest Rate.');
+        throw new Error('Server is offline (502 Bad Gateway). Please check backend server.');
       }
       console.warn('Dedicated bulk-group-interest endpoint notice, using settings fallback:', err.message);
     }
 
-    // 2. Fallback to /admin/settings which is supported across all backend versions
+    // 4. Fallback to /admin/settings which is supported across all backend versions
     let currentGroupRates = { 1: 5, 2: 6, 3: 7, 4: 8, 5: 9 };
     try {
       const s = await request('/admin/settings');
@@ -238,6 +289,8 @@ export const adminApi = {
     });
     return settingsRes;
   },
+  getGroupsOverview: () => request('/groups'),
+  getGroupInterestRates: () => request('/interest'),
   deleteAsset: (id) =>
     request(`/assets/admin/${encodeURIComponent(id)}`, {
       method: 'DELETE',

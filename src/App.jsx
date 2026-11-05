@@ -387,7 +387,7 @@ export default function App() {
         </div>
         <div className="flex items-center gap-2.5 text-xs text-slate-400 font-mono">
           <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-          <span>Connecting to live server (api.paynex.co.in)...</span>
+          <span>Connecting to live server (paynex-backend-hsit.onrender.com)...</span>
         </div>
       </div>
     );
